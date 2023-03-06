@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Config.hpp"
 #include "HttpServer.hpp"
 #include <cstddef>
 #include <string>
@@ -9,22 +10,10 @@ using namespace std;
 
 class WebServ {
 public:
-  WebServ(const string &configFile) {
-    // configFile 파싱 -> vector<Config> config만들고
-  }
+  WebServ(const vector<Config> &configs) { initHttpServers(configs); }
   virtual ~WebServ() {}
 
   void run() {
-    initHttpServers();
-    eventLoop();
-  }
-
-private:
-  void initHttpServers() {
-    for (int i = 0; i < mConfigs.size(); i++)
-      mHttpServers.push_back(HttpServer(mConfigs[i]));
-  }
-  void eventLoop() {
     // kevent
     // accept
     // read
@@ -33,6 +22,12 @@ private:
   }
 
 private:
-  vector<Config> mConfigs;
+  void initHttpServers(vector<Config> configs) {
+    for (const auto &config : configs) {
+      mHttpServers.push_back(HttpServer(config));
+    }
+  }
+
+private:
   vector<HttpServer> mHttpServers;
 };
