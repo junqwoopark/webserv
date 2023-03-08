@@ -1,9 +1,11 @@
 #pragma once
 
 #include <cstddef>
+#include <iostream>
 #include <map>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 #include "Config.hpp"
 #include "Token.hpp"
@@ -46,13 +48,15 @@ class ConfigParser {
     mFuncMap[make_pair(CloseServerBlock, Token::Identifier)] = &ConfigParser::CloseServerBlockFunc;
   }
 
-  void parse() {
-    // while (mStatus != Finish) {
-    //   void (ConfigParser::*func)(Token) = mFuncMap[make_pair(mStatus, Token::Identifier)];
-    //   if (func == nullptr) {
-    //   }
-    //   func(Token(Token::Identifier));
-    // }
+  void parse(vector<Token> tokens) {
+    for (auto token : tokens) {
+      auto func = mFuncMap[make_pair(mStatus, token.kind())];
+      if (func) {
+        (this->*func)(token);
+      } else {
+        throw "Error: " + token.lexeme() + " is not expected";
+      }
+    }
   }
 
  private:
@@ -102,30 +106,30 @@ void ConfigParser::GetKeyFunc(Token token) {
   }
 }
 void ConfigParser::GetValueFunc(Token token) {
-  if (token.lexeme() == "server_name") {
-    mStatus = GetValue;
-  } else if (token.lexeme() == "listen") {
-    mStatus = GetValue;
-  } else if (token.lexeme() == "location") {
+  if (token.lexeme() == ";") {
     mStatus = GetLocation;
   } else {
-    throw "Error: " + token.lexeme() + " is not server_name or listen or location";
+    mStatus = GetValue;
   }
+
+  // if (token.lexeme() == "server_name") {
+  //   mStatus = GetValue;
+  // } else if (token.lexeme() == "listen") {
+  //   mStatus = GetValue;
+  // } else if (token.lexeme() == "location") {
+  //   mStatus = GetLocation;
+  // } else {
+  //   throw "Error: " + token.lexeme() + " is not server_name or listen or location";
+  // }
 }
 void ConfigParser::GetLocationFunc(Token token) {
   if (token.lexeme() == "location") {
     mStatus = GetPath;
   } else {
-    throw "Error: " + token.lexeme() + " is not location";
+    mStatus = GetValue;
   }
 }
-void ConfigParser::GetPathFunc(Token token) {
-  if (token.lexeme() == "location") {
-    mStatus = OpenLocationBlock;
-  } else {
-    throw "Error: " + token.lexeme() + " is not location";
-  }
-}
+void ConfigParser::GetPathFunc(Token token) { mStatus = OpenLocationBlock; }
 void ConfigParser::OpenLocationBlockFunc(Token token) {
   if (token.lexeme() == "{") {
     mStatus = GetLocationKey;
@@ -133,6 +137,7 @@ void ConfigParser::OpenLocationBlockFunc(Token token) {
     throw "Error: " + token.lexeme() + " is not location";
   }
 }
+
 void ConfigParser::GetLocationKeyFunc(Token token) {
   if (token.lexeme() == "root") {
     mStatus = GetLocationValue;
@@ -157,10 +162,10 @@ void ConfigParser::GetLocationKeyFunc(Token token) {
   }
 }
 void ConfigParser::GetLocationValueFunc(Token token) {
-  // if () {
-  // } else {
-  //   throw "Error: " + token.lexeme() + " is not ... ";
-  // }
+  if (token.lexeme() == ";")
+    mStatus = CloseLocationBlock;
+  else
+    mStatus = GetLocationValue;
 }
 void ConfigParser::CloseLocationBlockFunc(Token token) {
   if (token.lexeme() == "}") {
@@ -169,10 +174,11 @@ void ConfigParser::CloseLocationBlockFunc(Token token) {
     throw "Error: " + token.lexeme() + " is not }";
   }
 }
+
 void ConfigParser::CloseServerBlockFunc(Token token) {
   if (token.lexeme() == "}") {
     mStatus = Finish;
-  } else {
-    throw "Error: " + token.lexeme() + " is not }";
+  } else if (token.lexeme() == "location") {
+    mStatus = GetPath;
   }
 }
