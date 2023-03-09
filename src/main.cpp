@@ -14,11 +14,6 @@ int main(void) {
   vector<Token> tokens;
   for (Token token = lexer.next(); token.kind() != Token::End; token = lexer.next()) {
     tokens.push_back(token);
-    // cout << token.lexeme() << endl;
-  }
-  cout << "Tokens: " << endl;
-  for (auto token : tokens) {
-    cout << token.lexeme() << endl;
   }
   try {
     parser.parse(tokens);

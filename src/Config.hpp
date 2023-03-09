@@ -10,7 +10,7 @@ struct RouteConfig {
   bool isAutoIndex;
   string httpRedirection;
   string rootPath;
-  string index; // default file to answer if the request is a directory
+  string index;
   string fileExtension;
   string fastcgiPass;
 };

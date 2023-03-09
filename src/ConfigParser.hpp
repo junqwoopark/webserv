@@ -15,29 +15,34 @@ using namespace std;
 class ConfigParser {
  public:
   enum eStatus {
+    GetHttp,
+    OpenHttpBlock,
     GetServer,
     OpenServerBlock,
-    GetKey,
-    GetValue,
+    GetServerKey,
+    GetServerValue,
     GetLocation,
-    GetPath,
+    GetLocationPath,
     OpenLocationBlock,
     GetLocationKey,
     GetLocationValue,
     CloseLocationBlock,
     CloseServerBlock,
+    CloseHttpBlock,
     Finish,
   };
 
-  ConfigParser() : mStatus(GetServer) {
+  ConfigParser() : mStatus(GetHttp) {
     // mFuncMap initialization
+    mFuncMap[make_pair(GetHttp, Token::Identifier)] = &ConfigParser::GetHttpFunc;
+    mFuncMap[make_pair(OpenHttpBlock, Token::LeftCurly)] = &ConfigParser::OpenHttpBlockFunc;
     mFuncMap[make_pair(GetServer, Token::Identifier)] = &ConfigParser::GetServerFunc;
     mFuncMap[make_pair(OpenServerBlock, Token::LeftCurly)] = &ConfigParser::OpenServerBlockFunc;
-    mFuncMap[make_pair(GetKey, Token::Identifier)] = &ConfigParser::GetKeyFunc;
-    mFuncMap[make_pair(GetValue, Token::SemiColon)] = &ConfigParser::GetValueFunc;
-    mFuncMap[make_pair(GetValue, Token::Identifier)] = &ConfigParser::GetValueFunc;
+    mFuncMap[make_pair(GetServerKey, Token::Identifier)] = &ConfigParser::GetServerKeyFunc;
+    mFuncMap[make_pair(GetServerValue, Token::SemiColon)] = &ConfigParser::GetServerValueFunc;
+    mFuncMap[make_pair(GetServerValue, Token::Identifier)] = &ConfigParser::GetServerValueFunc;
     mFuncMap[make_pair(GetLocation, Token::Identifier)] = &ConfigParser::GetLocationFunc;
-    mFuncMap[make_pair(GetPath, Token::Identifier)] = &ConfigParser::GetPathFunc;
+    mFuncMap[make_pair(GetLocationPath, Token::Identifier)] = &ConfigParser::GetLocationPathFunc;
     mFuncMap[make_pair(OpenLocationBlock, Token::LeftCurly)] = &ConfigParser::OpenLocationBlockFunc;
     mFuncMap[make_pair(GetLocationKey, Token::Identifier)] = &ConfigParser::GetLocationKeyFunc;
     mFuncMap[make_pair(GetLocationValue, Token::SemiColon)] = &ConfigParser::GetLocationValueFunc;
@@ -46,6 +51,8 @@ class ConfigParser {
     mFuncMap[make_pair(CloseLocationBlock, Token::Identifier)] = &ConfigParser::CloseLocationBlockFunc;
     mFuncMap[make_pair(CloseServerBlock, Token::RightCurly)] = &ConfigParser::CloseServerBlockFunc;
     mFuncMap[make_pair(CloseServerBlock, Token::Identifier)] = &ConfigParser::CloseServerBlockFunc;
+    mFuncMap[make_pair(CloseHttpBlock, Token::RightCurly)] = &ConfigParser::CloseHttpBlockFunc;
+    mFuncMap[make_pair(CloseHttpBlock, Token::Identifier)] = &ConfigParser::CloseHttpBlockFunc;
   }
 
   void parse(vector<Token> tokens) {
@@ -57,26 +64,48 @@ class ConfigParser {
         throw "Error: " + token.lexeme() + " is not expected";
       }
     }
+    if (mStatus != Finish) {
+      throw "Error: " + tokens.back().lexeme() + " is not expected";
+    }
   }
 
  private:
+  void GetHttpFunc(Token token);
+  void OpenHttpBlockFunc(Token token);
   void GetServerFunc(Token token);
   void OpenServerBlockFunc(Token token);
-  void GetKeyFunc(Token token);
-  void GetValueFunc(Token token);
+  void GetServerKeyFunc(Token token);
+  void GetServerValueFunc(Token token);
   void GetLocationFunc(Token token);
-  void GetPathFunc(Token token);
+  void GetLocationPathFunc(Token token);
   void OpenLocationBlockFunc(Token token);
   void GetLocationKeyFunc(Token token);
   void GetLocationValueFunc(Token token);
   void CloseLocationBlockFunc(Token token);
   void CloseServerBlockFunc(Token token);
+  void CloseHttpBlockFunc(Token token);
 
  private:
-  eStatus mStatus;
+  eStatus mStatus;  // mFinish인지만 확인해주면 됨.
 
   map<pair<int, Token::Kind>, void (ConfigParser::*)(Token)> mFuncMap;
 };
+
+void ConfigParser::GetHttpFunc(Token token) {
+  if (token.lexeme() == "http") {
+    mStatus = OpenHttpBlock;
+  } else {
+    throw "Error: " + token.lexeme() + " is not server";
+  }
+}
+
+void ConfigParser::OpenHttpBlockFunc(Token token) {
+  if (token.lexeme() == "{") {
+    mStatus = GetServer;
+  } else {
+    throw "Error: " + token.lexeme() + " is not {";
+  }
+}
 
 void ConfigParser::GetServerFunc(Token token) {
   if (token.lexeme() == "server") {
@@ -88,34 +117,34 @@ void ConfigParser::GetServerFunc(Token token) {
 
 void ConfigParser::OpenServerBlockFunc(Token token) {
   if (token.lexeme() == "{") {
-    mStatus = GetKey;
+    mStatus = GetServerKey;
   } else {
     throw "Error: " + token.lexeme() + " is not {";
   }
 }
 
-void ConfigParser::GetKeyFunc(Token token) {
+void ConfigParser::GetServerKeyFunc(Token token) {
   if (token.lexeme() == "server_name") {
-    mStatus = GetValue;
+    mStatus = GetServerValue;
   } else if (token.lexeme() == "listen") {
-    mStatus = GetValue;
+    mStatus = GetServerValue;
   } else if (token.lexeme() == "location") {
     mStatus = GetLocation;
   } else {
     throw "Error: " + token.lexeme() + " is not server_name or listen or location";
   }
 }
-void ConfigParser::GetValueFunc(Token token) {
+void ConfigParser::GetServerValueFunc(Token token) {
   if (token.lexeme() == ";") {
     mStatus = GetLocation;
   } else {
-    mStatus = GetValue;
+    mStatus = GetServerValue;
   }
 
   // if (token.lexeme() == "server_name") {
-  //   mStatus = GetValue;
+  //   mStatus = GetServerValue;
   // } else if (token.lexeme() == "listen") {
-  //   mStatus = GetValue;
+  //   mStatus = GetServerValue;
   // } else if (token.lexeme() == "location") {
   //   mStatus = GetLocation;
   // } else {
@@ -124,12 +153,12 @@ void ConfigParser::GetValueFunc(Token token) {
 }
 void ConfigParser::GetLocationFunc(Token token) {
   if (token.lexeme() == "location") {
-    mStatus = GetPath;
+    mStatus = GetLocationPath;
   } else {
-    mStatus = GetValue;
+    mStatus = GetServerValue;
   }
 }
-void ConfigParser::GetPathFunc(Token token) { mStatus = OpenLocationBlock; }
+void ConfigParser::GetLocationPathFunc(Token token) { mStatus = OpenLocationBlock; }
 void ConfigParser::OpenLocationBlockFunc(Token token) {
   if (token.lexeme() == "{") {
     mStatus = GetLocationKey;
@@ -153,8 +182,6 @@ void ConfigParser::GetLocationKeyFunc(Token token) {
     mStatus = GetLocationValue;
   } else if (token.lexeme() == "cgi") {
     mStatus = GetLocationValue;
-  } else if (token.lexeme() == "}") {
-    mStatus = CloseLocationBlock;
   } else {
     throw "Error: " + token.lexeme() +
         " is not root or index or autoindex or limit_except or return or "
@@ -171,14 +198,22 @@ void ConfigParser::CloseLocationBlockFunc(Token token) {
   if (token.lexeme() == "}") {
     mStatus = CloseServerBlock;
   } else {
-    throw "Error: " + token.lexeme() + " is not }";
+    mStatus = GetLocationValue;
   }
 }
 
 void ConfigParser::CloseServerBlockFunc(Token token) {
   if (token.lexeme() == "}") {
-    mStatus = Finish;
+    mStatus = CloseHttpBlock;
   } else if (token.lexeme() == "location") {
-    mStatus = GetPath;
+    mStatus = GetLocationPath;
+  }
+}
+
+void ConfigParser::CloseHttpBlockFunc(Token token) {
+  if (token.lexeme() == "}") {
+    mStatus = Finish;
+  } else if (token.lexeme() == "server") {
+    mStatus = OpenServerBlock;
   }
 }
