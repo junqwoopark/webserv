@@ -1,0 +1,47 @@
+{
+  "homebrew_version": "3.6.8-29-g5468c2d",
+  "used_options": [
+
+  ],
+  "unused_options": [
+
+  ],
+  "built_as_bottle": true,
+  "poured_from_bottle": true,
+  "loaded_from_api": true,
+  "installed_as_dependency": false,
+  "installed_on_request": true,
+  "changed_files": [
+    "lib/pkgconfig/fcgi++.pc",
+    "lib/pkgconfig/fcgi.pc"
+  ],
+  "time": 1679373294,
+  "source_modified_time": 1550575159,
+  "compiler": "clang",
+  "aliases": [
+    "fastcgi"
+  ],
+  "runtime_dependencies": [
+
+  ],
+  "source": {
+    "spec": "stable",
+    "versions": {
+      "stable": "2.4.2",
+      "head": null,
+      "version_scheme": 0
+    },
+    "path": "/opt/homebrew/Library/Taps/homebrew/homebrew-core/Formula/fcgi.rb",
+    "tap_git_head": "ca71cd77cce9541a9f1881375833d147f02a7926",
+    "tap": "homebrew/core"
+  },
+  "arch": "arm64",
+  "built_on": {
+    "os": "Macintosh",
+    "os_version": "macOS 13",
+    "cpu_family": "dunno",
+    "xcode": "14.1",
+    "clt": "14.1.0.0.1.1665256668",
+    "preferred_perl": "5.30"
+  }
+}

@@ -1,0 +1,9 @@
+prefix=/opt/homebrew/Cellar/fcgi/2.4.2
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+
+Name: fcgi
+Description: FastCGI C++ Developer's Kit
+URL: https://fastcgi-archives.github.io
+Version: 2.4.2
+Libs: -L${libdir} -lfcgi++
