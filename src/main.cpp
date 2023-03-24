@@ -1,5 +1,6 @@
 #include <vector>
 
+#include "Config.hpp"
 #include "ConfigParser.hpp"
 #include "Lexer.hpp"
 #include "Token.hpp"
@@ -16,10 +17,12 @@ int main(void) {
     tokens.push_back(token);
   }
   try {
-    parser.parse(tokens);
+    HttpConfig config = parser.parse(tokens);
+    cout << config << endl;
     cout << "OKAY" << endl;
   } catch (...) {
     cout << "ERROR!!!";
   }
+
   return 0;
 }

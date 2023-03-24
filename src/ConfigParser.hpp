@@ -4,6 +4,7 @@
 #include <iostream>
 #include <map>
 #include <string>
+#include <type_traits>
 #include <unordered_map>
 #include <vector>
 
@@ -55,9 +56,10 @@ class ConfigParser {
     mFuncMap[make_pair(CloseHttpBlock, Token::Identifier)] = &ConfigParser::CloseHttpBlockFunc;
   }
 
-  void parse(vector<Token> tokens) {
-    for (auto token : tokens) {
-      auto func = mFuncMap[make_pair(mStatus, token.kind())];
+  HttpConfig parse(vector<Token> tokens) {
+    for (int i = 0; i < tokens.size(); ++i) {
+      Token &token = tokens[i];
+      void (ConfigParser::*func)(Token) = mFuncMap[make_pair(mStatus, token.kind())];
       if (func) {
         (this->*func)(token);
       } else {
@@ -67,7 +69,9 @@ class ConfigParser {
     if (mStatus != Finish) {
       throw "Error: " + tokens.back().lexeme() + " is not expected";
     }
+    return mHttpConfig;
   }
+
 
  private:
   void GetHttpFunc(Token token);
@@ -89,6 +93,7 @@ class ConfigParser {
   eStatus mStatus;  // mFinish인지만 확인해주면 됨.
 
   map<pair<int, Token::Kind>, void (ConfigParser::*)(Token)> mFuncMap;
+  HttpConfig mHttpConfig;
 };
 
 void ConfigParser::GetHttpFunc(Token token) {
@@ -110,7 +115,8 @@ void ConfigParser::OpenHttpBlockFunc(Token token) {
 void ConfigParser::GetServerFunc(Token token) {
   if (token.lexeme() == "server") {
     mStatus = OpenServerBlock;
-  } else {
+    mHttpConfig.GetServer();
+   } else {
     throw "Error: " + token.lexeme() + " is not server";
   }
 }
@@ -124,11 +130,16 @@ void ConfigParser::OpenServerBlockFunc(Token token) {
 }
 
 void ConfigParser::GetServerKeyFunc(Token token) {
-  if (token.lexeme() == "server_name") {
+  mHttpConfig.GetServerKey(token.lexeme());
+  if (token.lexeme() == "server_name") { // key
     mStatus = GetServerValue;
-  } else if (token.lexeme() == "listen") {
+  } else if (token.lexeme() == "listen") { // key
     mStatus = GetServerValue;
-  } else if (token.lexeme() == "location") {
+  } else if (token.lexeme() == "error_page") { // key
+    mStatus = GetServerValue;
+  } else if (token.lexeme() == "client_max_body_size") { // key
+    mStatus = GetServerValue;
+  } else if (token.lexeme() == "location") { // key
     mStatus = GetLocation;
   } else {
     throw "Error: " + token.lexeme() + " is not server_name or listen or location";
@@ -139,26 +150,24 @@ void ConfigParser::GetServerValueFunc(Token token) {
     mStatus = GetLocation;
   } else {
     mStatus = GetServerValue;
+    mHttpConfig.GetServerValue(token.lexeme());
   }
-
-  // if (token.lexeme() == "server_name") {
-  //   mStatus = GetServerValue;
-  // } else if (token.lexeme() == "listen") {
-  //   mStatus = GetServerValue;
-  // } else if (token.lexeme() == "location") {
-  //   mStatus = GetLocation;
-  // } else {
-  //   throw "Error: " + token.lexeme() + " is not server_name or listen or location";
-  // }
 }
+
 void ConfigParser::GetLocationFunc(Token token) {
   if (token.lexeme() == "location") {
     mStatus = GetLocationPath;
   } else {
     mStatus = GetServerValue;
+    mHttpConfig.GetServerKey(token.lexeme());
   }
 }
-void ConfigParser::GetLocationPathFunc(Token token) { mStatus = OpenLocationBlock; }
+
+void ConfigParser::GetLocationPathFunc(Token token) {
+  mStatus = OpenLocationBlock;
+  mHttpConfig.GetLocationPath(token.lexeme());
+}
+
 void ConfigParser::OpenLocationBlockFunc(Token token) {
   if (token.lexeme() == "{") {
     mStatus = GetLocationKey;
@@ -168,6 +177,7 @@ void ConfigParser::OpenLocationBlockFunc(Token token) {
 }
 
 void ConfigParser::GetLocationKeyFunc(Token token) {
+  mHttpConfig.GetLocationKey(token.lexeme());
   if (token.lexeme() == "root") {
     mStatus = GetLocationValue;
   } else if (token.lexeme() == "index") {
@@ -180,7 +190,9 @@ void ConfigParser::GetLocationKeyFunc(Token token) {
     mStatus = GetLocationValue;
   } else if (token.lexeme() == "error_page") {
     mStatus = GetLocationValue;
-  } else if (token.lexeme() == "cgi") {
+  } else if (token.lexeme() == "fastcgi_pass") {
+    mStatus = GetLocationValue;
+  } else if (token.lexeme() == "fastcgi_param") {
     mStatus = GetLocationValue;
   } else {
     throw "Error: " + token.lexeme() +
@@ -188,12 +200,16 @@ void ConfigParser::GetLocationKeyFunc(Token token) {
         "error_page or cgi";
   }
 }
+
 void ConfigParser::GetLocationValueFunc(Token token) {
-  if (token.lexeme() == ";")
+  if (token.lexeme() == ";") {
     mStatus = CloseLocationBlock;
-  else
+  } else {
     mStatus = GetLocationValue;
+    mHttpConfig.GetLocationValue(token.lexeme());
+  }
 }
+
 void ConfigParser::CloseLocationBlockFunc(Token token) {
   if (token.lexeme() == "}") {
     mStatus = CloseServerBlock;
@@ -207,6 +223,8 @@ void ConfigParser::CloseServerBlockFunc(Token token) {
     mStatus = CloseHttpBlock;
   } else if (token.lexeme() == "location") {
     mStatus = GetLocationPath;
+  } else {
+    throw "Error: " + token.lexeme() + " is not } or location";
   }
 }
 
@@ -217,3 +235,4 @@ void ConfigParser::CloseHttpBlockFunc(Token token) {
     mStatus = OpenServerBlock;
   }
 }
+

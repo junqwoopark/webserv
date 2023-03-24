@@ -18,7 +18,7 @@ class Token {
 
   Kind kind() const { return mKind; }
   void kind(Kind kind) { mKind = kind; }
-  std::string lexeme() const { return mLexeme; }
+  std::string &lexeme() { return mLexeme; }
 
  private:
   Kind mKind;
