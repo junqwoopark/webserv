@@ -72,7 +72,6 @@ class ConfigParser {
     return mHttpConfig;
   }
 
-
  private:
   void GetHttpFunc(Token token);
   void OpenHttpBlockFunc(Token token);
@@ -115,8 +114,7 @@ void ConfigParser::OpenHttpBlockFunc(Token token) {
 void ConfigParser::GetServerFunc(Token token) {
   if (token.lexeme() == "server") {
     mStatus = OpenServerBlock;
-    mHttpConfig.GetServer();
-   } else {
+  } else {
     throw "Error: " + token.lexeme() + " is not server";
   }
 }
@@ -124,6 +122,7 @@ void ConfigParser::GetServerFunc(Token token) {
 void ConfigParser::OpenServerBlockFunc(Token token) {
   if (token.lexeme() == "{") {
     mStatus = GetServerKey;
+    mHttpConfig.GetServer();
   } else {
     throw "Error: " + token.lexeme() + " is not {";
   }
@@ -131,15 +130,15 @@ void ConfigParser::OpenServerBlockFunc(Token token) {
 
 void ConfigParser::GetServerKeyFunc(Token token) {
   mHttpConfig.GetServerKey(token.lexeme());
-  if (token.lexeme() == "server_name") { // key
+  if (token.lexeme() == "server_name") {  // key
     mStatus = GetServerValue;
-  } else if (token.lexeme() == "listen") { // key
+  } else if (token.lexeme() == "listen") {  // key
     mStatus = GetServerValue;
-  } else if (token.lexeme() == "error_page") { // key
+  } else if (token.lexeme() == "error_page") {  // key
     mStatus = GetServerValue;
-  } else if (token.lexeme() == "client_max_body_size") { // key
+  } else if (token.lexeme() == "client_max_body_size") {  // key
     mStatus = GetServerValue;
-  } else if (token.lexeme() == "location") { // key
+  } else if (token.lexeme() == "location") {  // key
     mStatus = GetLocation;
   } else {
     throw "Error: " + token.lexeme() + " is not server_name or listen or location";
@@ -215,6 +214,7 @@ void ConfigParser::CloseLocationBlockFunc(Token token) {
     mStatus = CloseServerBlock;
   } else {
     mStatus = GetLocationValue;
+    mHttpConfig.GetLocationKey(token.lexeme());
   }
 }
 
@@ -235,4 +235,3 @@ void ConfigParser::CloseHttpBlockFunc(Token token) {
     mStatus = OpenServerBlock;
   }
 }
-
