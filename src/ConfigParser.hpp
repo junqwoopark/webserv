@@ -9,7 +9,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "Config.hpp"
+#include "HttpConfig.hpp"
 #include "Lexer.hpp"
 #include "Token.hpp"
 

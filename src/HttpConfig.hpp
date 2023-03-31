@@ -83,6 +83,8 @@ class HttpConfig {
  public:
   HttpConfig() {}
 
+  vector<ServerConfig> &getServerConfigList() { return mServerConfigList; }
+
   void GetHttp();
   void OpenHttpBlock();
   void GetServer();

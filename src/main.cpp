@@ -1,9 +1,10 @@
 #include <vector>
 
-#include "Config.hpp"
 #include "ConfigParser.hpp"
+#include "HttpConfig.hpp"
 #include "Lexer.hpp"
 #include "Token.hpp"
+#include "WebServ.hpp"
 
 using namespace std;
 
@@ -15,8 +16,8 @@ int main(int argc, char **argv) {
   ConfigParser configParser;
   HttpConfig config = configParser.parse(argv[1]);
   cout << config << endl;
-  // Webserv webserv(config);
-  // webserv.run();
+  WebServ webserv(config);
+  webserv.run();
 
   // html 에코 서버?
 
