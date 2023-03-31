@@ -8,6 +8,7 @@
 class Lexer {
  public:
   Lexer(const char *beg) : mBeg(beg){};
+
   Token next() {
     while (std::isspace(peek())) {
       get();
@@ -39,6 +40,7 @@ class Lexer {
     }
     return Token(Token::Identifier, beg, mBeg);
   }
+
   Token atom(Token::Kind kind) {
     const char *beg = mBeg;
     get();

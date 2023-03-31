@@ -3,12 +3,14 @@
 #include <cstddef>
 #include <iostream>
 #include <map>
+#include <stdexcept>
 #include <string>
 #include <type_traits>
 #include <unordered_map>
 #include <vector>
 
 #include "Config.hpp"
+#include "Lexer.hpp"
 #include "Token.hpp"
 
 using namespace std;
@@ -56,20 +58,32 @@ class ConfigParser {
     mFuncMap[make_pair(CloseHttpBlock, Token::Identifier)] = &ConfigParser::CloseHttpBlockFunc;
   }
 
-  HttpConfig parse(vector<Token> tokens) {
-    for (int i = 0; i < tokens.size(); ++i) {
-      Token &token = tokens[i];
-      void (ConfigParser::*func)(Token) = mFuncMap[make_pair(mStatus, token.kind())];
-      if (func) {
-        (this->*func)(token);
-      } else {
-        throw "Error: " + token.lexeme() + " is not expected";
+  HttpConfig parse(const char *fileName) {
+    try {
+      ifstream file(fileName);
+      if (!file.is_open()) {
+        throw invalid_argument("Error: " + string(fileName) + " is not found");
       }
+      string str((istreambuf_iterator<char>(file)), istreambuf_iterator<char>());
+      Lexer lexer(str.c_str());
+      Token token(Token::Start);
+
+      for (token = lexer.next(); token.kind() != Token::End; token = lexer.next()) {
+        void (ConfigParser::*func)(Token) = mFuncMap[make_pair(mStatus, token.kind())];
+        if (func) {
+          (this->*func)(token);
+        } else {
+          throw invalid_argument("Error: " + token.lexeme() + " is not expected");
+        }
+      }
+      if (mStatus != Finish) {
+        throw invalid_argument("Error: " + token.lexeme() + " is not expected");
+      }
+      return mHttpConfig;
+    } catch (exception &e) {
+      cerr << e.what() << endl;
+      exit(1);
     }
-    if (mStatus != Finish) {
-      throw "Error: " + tokens.back().lexeme() + " is not expected";
-    }
-    return mHttpConfig;
   }
 
  private:

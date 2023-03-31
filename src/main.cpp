@@ -7,22 +7,18 @@
 
 using namespace std;
 
-int main(void) {
-  std::ifstream file("nginx.conf");
-  std::string str((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-  Lexer lexer(str.c_str());
-  ConfigParser parser;
-  vector<Token> tokens;
-  for (Token token = lexer.next(); token.kind() != Token::End; token = lexer.next()) {
-    tokens.push_back(token);
+int main(int argc, char **argv) {
+  if (argc != 2) {
+    cout << "Usage: " << argv[0] << " [config file]" << endl;
+    return 1;
   }
-  try {
-    HttpConfig config = parser.parse(tokens);
-    cout << config << endl;
-    cout << "OKAY" << endl;
-  } catch (...) {
-    cout << "ERROR!!!";
-  }
+  ConfigParser configParser;
+  HttpConfig config = configParser.parse(argv[1]);
+  cout << config << endl;
+  // Webserv webserv(config);
+  // webserv.run();
+
+  // html 에코 서버?
 
   return 0;
 }

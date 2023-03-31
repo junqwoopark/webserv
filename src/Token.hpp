@@ -4,6 +4,7 @@
 class Token {
  public:
   enum Kind {
+    Start,
     Identifier,
     LeftCurly,
     RightCurly,
