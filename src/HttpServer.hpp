@@ -38,6 +38,7 @@ class HttpServer {
   }
 
   int getServerSocketFd() { return mServerSocketFd; }
+  ServerConfig &getServerConfig() { return mServerConfig; }
 
   ~HttpServer() {}
 

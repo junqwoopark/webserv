@@ -1,11 +1,12 @@
 #pragma once
 
-#include <iostream>
 #include <netinet/in.h>
-#include <string>
 #include <sys/event.h>
 #include <sys/socket.h>
 #include <unistd.h>
+
+#include <iostream>
+#include <string>
 #include <unordered_map>
 
 #include "Request.hpp"
@@ -16,7 +17,7 @@ using namespace std;
 enum eType { ConnectClient, ReadClient, ReadFile, ReadCgi, WriteClient, WriteFile, WriteCgi, CloseSocket };
 
 class udata {
-public:
+ public:
   udata(int readFd, int writeFd, eType type, string buffer = "") {
     this->readFd = readFd;
     this->writeFd = writeFd;
@@ -34,7 +35,7 @@ public:
 };
 
 class ClientEventHandler {
-public:
+ public:
   ClientEventHandler() {}
 
   virtual ~ClientEventHandler() {}
@@ -66,8 +67,7 @@ void readClientEventHandler(int kq, udata *udata) {
   int readSize = read(udata->readFd, buffer, 1024);
   udata->buffer.append(buffer, readSize);
 
-  if (udata->buffer.find("\r\n\r\n") == string::npos)
-    return;
+  if (udata->buffer.find("\r\n\r\n") == string::npos) return;
 
   Request request(udata->buffer);
   request.parse();
@@ -108,15 +108,20 @@ void readFileEventHandler(int kq, udata *udata) {
 void readCgiEventHandler(int kq, udata *udata) {}
 
 void writeClientEventHandler(int kq, udata *udata) {
-  string mResponse = "HTTP/1.1 200 OK\r\n"
-                     "Content-Type: text/html\r\n"
-                     "Content-Length: 12\r\n"
-                     "\r\n"
-                     "Hello World!";
+  string mResponse =
+      "HTTP/1.1 200 OK\r\n"
+      "Content-Type: text/html\r\n"
+      "Content-Length: 12\r\n"
+      "\r\n"
+      "Hello World!";
 
   write(udata->writeFd, mResponse.c_str(), mResponse.size());
   udata->type = CloseSocket;
+  delete udata;
 }
 void writeFileEventHandler(int kq, udata *udata) {}
 void writeCgiEventHandler(int kq, udata *udata) {}
-void closeSocketEventHandler(int kq, udata *udata) { close(udata->writeFd); }
+void closeSocketEventHandler(int kq, udata *udata) {
+  delete udata;
+  close(udata->writeFd);
+}
