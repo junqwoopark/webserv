@@ -26,7 +26,11 @@ using namespace std;
 class WebServ {  // 역할: kqueue 이벤트를 받아서 각각 요청이 들어온 http 서버로 이벤트를 전달.
  public:
   WebServ(HttpConfig &httpConfig) { initHttpServers(httpConfig); }
-  virtual ~WebServ() {}
+  virtual ~WebServ() {
+    for (map<FD, HttpServer>::iterator it = mHttpServerMap.begin(); it != mHttpServerMap.end(); it++) {
+      close(it->first);
+    }
+  }
 
   void run() {
     int kq = kqueue();
@@ -42,7 +46,7 @@ class WebServ {  // 역할: kqueue 이벤트를 받아서 각각 요청이 들�
       int fd = it->second.getServerSocketFd();
       ServerConfig *serverConfig = &it->second.getServerConfig();
 
-      UData *udata = new UData(fd, fd, -1, serverConfig, ConnectClient);  // serverConfig 설정
+      UData *udata = new UData(fd, -1, serverConfig, ConnectClient);  // serverConfig 설정
       EV_SET(&event, fd, EVFILT_READ, EV_ADD, 0, 0, udata);
       if (kevent(kq, &event, 1, NULL, 0, NULL) == -1) {
         throw runtime_error("kevent error");

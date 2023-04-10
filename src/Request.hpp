@@ -8,9 +8,15 @@ using namespace std;
 
 class Request {
  public:
-  Request(const std::string &rawRequest) {
-    mRawRequest = rawRequest;
-    parse();
+  Request() {}
+
+  void append(char *buffer, size_t size) { mRawRequest.append(buffer, size); }
+  bool isComplete() {
+    if (mRawRequest.find("\r\n\r\n") != string::npos) {
+      parse();
+      return true;
+    }
+    return false;
   }
 
   string getMethod() { return mMethod; }
@@ -56,15 +62,4 @@ class Request {
   string mHttpVersion;
   map<string, string> mHeaders;
   string mBody;
-
-  friend ostream &operator<<(ostream &os, const Request &request) {
-    os << "Method: " << request.mMethod << endl;
-    os << "Uri: " << request.mUri << endl;
-    os << "HttpVersion: " << request.mHttpVersion << endl;
-    for (auto &header : request.mHeaders) {
-      os << header.first << ": " << header.second << endl;
-    }
-    os << "Body: " << request.mBody << endl;
-    return os;
-  }
 };
