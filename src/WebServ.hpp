@@ -45,6 +45,7 @@ class WebServ {  // 역할: kqueue 이벤트를 받아서 각각 요청이 들�
     for (map<FD, HttpServer>::iterator it = mHttpServerMap.begin(); it != mHttpServerMap.end(); it++) {
       int fd = it->second.getServerSocketFd();
       ServerConfig *serverConfig = &it->second.getServerConfig();
+      serverConfig->buildLocationConfigTrie();
 
       UData *udata = new UData(fd, -1, serverConfig, ConnectClient);  // serverConfig 설정
       EV_SET(&event, fd, EVFILT_READ, EV_ADD, 0, 0, udata);
@@ -57,8 +58,8 @@ class WebServ {  // 역할: kqueue 이벤트를 받아서 각각 요청이 들�
     EventHandler eventHandler;
     while (42) {
       // udataList 에있는 udata timeout 검사
-      struct kevent eventList[10];
-      int eventCount = kevent(kq, NULL, 0, eventList, 10, NULL);
+      struct kevent eventList[1024];
+      int eventCount = kevent(kq, NULL, 0, eventList, 1024, NULL);
 
       if (eventCount == -1) {
         throw runtime_error("kevent error");
@@ -75,9 +76,15 @@ class WebServ {  // 역할: kqueue 이벤트를 받아서 각각 요청이 들�
     }
   }
 
+  void stop() {
+    for (map<FD, HttpServer>::iterator it = mHttpServerMap.begin(); it != mHttpServerMap.end(); it++) {
+      close(it->first);
+    }
+  }
+
  private:
   void initHttpServers(HttpConfig &httpConfig) {
-    vector<ServerConfig> serverConfigList = httpConfig.getServerConfigList();
+    vector<ServerConfig> &serverConfigList = httpConfig.getServerConfigList();
     for (int i = 0; i < serverConfigList.size(); i++) {
       HttpServer httpServer(serverConfigList[i]);
       mHttpServerMap[httpServer.getServerSocketFd()] = httpServer;

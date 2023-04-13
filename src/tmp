@@ -1,0 +1,43 @@
+server_name: localhost 
+server_host: 
+server_port: 4242
+default_error_page: 404/404.html 
+max_client_body_size: 100
+location_config_list: 
+  path: /home
+  root_path: /Users/junkpark/Projects/webserv/response_file
+  return_redirect: 
+  limit_except_list: GET POST 
+  index_list: index.html 
+  fastcgi_pass: 
+  is_auto_index: 0
+  path: /cgi
+  root_path: 
+  return_redirect: 
+  limit_except_list: GET 
+  index_list: 
+  fastcgi_pass: 127.0.0.1:9000
+  is_auto_index: 0
+
+server_name: localhost 
+server_host: 
+server_port: 4243
+default_error_page: 404/404.html 
+max_client_body_size: 100
+location_config_list: 
+  path: /
+  root_path: /Users/junkpark/Projects/webserv/response_file
+  return_redirect: 
+  limit_except_list: GET POST DELETE 
+  index_list: index.html 
+  fastcgi_pass: 
+  is_auto_index: 0
+  path: /home
+  root_path: /Users/junkpark/Projects/webserv/response_file
+  return_redirect: 
+  limit_except_list: GET POST 
+  index_list: index.html 
+  fastcgi_pass: 
+  is_auto_index: 0
+
+

@@ -17,7 +17,7 @@ enum eIoEventState {
   WriteCgi,
   DeleteFile,
   CloseSocket,
-  Error
+  Error,
 };
 
 struct UData {
@@ -27,6 +27,9 @@ struct UData {
     this->ioEventState = ioEventState;
 
     this->serverConfig = serverConfig;
+
+    this->request = Request();
+    this->response = string();
   }
 
   int serverFd;  // 파일, cgi 를 읽고 쓰는 fd

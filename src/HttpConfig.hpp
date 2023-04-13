@@ -7,6 +7,8 @@
 #include <string>
 #include <vector>
 
+#include "Trie.hpp"
+
 using namespace std;
 
 struct LocationConfig {
@@ -27,6 +29,13 @@ struct ServerConfig {
   size_t serverPort;
   size_t maxClientBodySize;
   vector<LocationConfig> locationConfigList;  // 시간..?
+  Trie locationConfigTrie;
+
+  void buildLocationConfigTrie() {
+    for (int i = 0; i < locationConfigList.size(); i++) {
+      locationConfigTrie.insert(locationConfigList[i].path, &locationConfigList[i]);
+    }
+  }
 };
 
 ostream &operator<<(ostream &os, const ServerConfig &serverConfig) {
@@ -195,6 +204,6 @@ void HttpConfig::GetLocationValue(string &value) {
 
 void HttpConfig::CloseLocationBlock() {}
 
-void HttpConfig::CloseServerBlock() {}
+void HttpConfig::CloseServerBlock() { cout << "CloseServerBlock" << endl; }
 
 void HttpConfig::CloseHttpBlock() {}

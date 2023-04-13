@@ -8,7 +8,14 @@ using namespace std;
 
 class Request {
  public:
-  Request() {}
+  Request() {
+    mRawRequest = "";
+    mMethod = "";
+    mUri = "";
+    mHttpVersion = "";
+    mHeaders = map<string, string>();
+    mBody = "";
+  }
 
   void append(char *buffer, size_t size) { mRawRequest.append(buffer, size); }
   bool isComplete() {
