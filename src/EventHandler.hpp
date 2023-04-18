@@ -319,6 +319,7 @@ class EventHandler {
         return Error;
       }
       if (method == "GET") {
+        cout << "cgi get" << endl;
         // read pipe하고, 읽기 부분 non_block하고, fork뜨고 안쓰는 부분 닫고, dup2때리고, execve에 query_string 넣어주면
         // 될듯? read를 이벤트 등록까지
         int fd[2];
