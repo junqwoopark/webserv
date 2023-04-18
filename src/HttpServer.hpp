@@ -32,7 +32,7 @@ class HttpServer {
       throw runtime_error("bind error");
     }
 
-    if (listen(mServerSocketFd, SOMAXCONN) == -1) {
+    if (listen(mServerSocketFd, 1024) == -1) {
       throw runtime_error("listen error");
     }
   }

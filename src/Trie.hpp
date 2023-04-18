@@ -62,6 +62,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include "HttpConfig.hpp"
+
 using namespace std;
 
 struct Node {
@@ -92,22 +94,23 @@ class Trie {
     cur->isEndOfWord = true;
   }
 
-  void* search(string path) {
+  pair<void*, string> search(string path) {
     Node* cur = root;
     void* data = NULL;
+    int idx = 0;
 
     for (int i = 0; i < path.size(); i++) {
       char name = path[i];
-      cout << name << endl;
       if (cur->children.find(name) == cur->children.end()) {
         break;
       }
       cur = cur->children[name];
       if (cur->isEndOfWord) {
         data = cur->data;
+        idx = i;
       }
     }
-    return data;
+    return make_pair(data, '/' + path.substr(idx + 1));
   }
 
  private:

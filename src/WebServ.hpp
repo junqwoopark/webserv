@@ -57,7 +57,6 @@ class WebServ {  // 역할: kqueue 이벤트를 받아서 각각 요청이 들�
 
     EventHandler eventHandler;
     while (42) {
-      // udataList 에있는 udata timeout 검사
       struct kevent eventList[1024];
       int eventCount = kevent(kq, NULL, 0, eventList, 1024, NULL);
 
@@ -71,7 +70,14 @@ class WebServ {  // 역할: kqueue 이벤트를 받아서 각각 요청이 들�
         }
 
         UData *udata = (UData *)eventList[i].udata;
-        eventHandler.handle(kq, udata, eventList[i]);
+        // cout << "eventList[i].ident: " << eventList[i].ident << endl;
+        // cout << "eventList[i].filter: " << eventList[i].filter << endl;
+        // cout << "eventList[i].flags: " << eventList[i].flags << endl;
+        // cout << "eventList[i].fflags: " << eventList[i].fflags << endl;
+        // cout << "eventList[i].data: " << eventList[i].data << endl;
+        // cout << "eventList[i].udata: " << eventList[i].udata << endl;
+        // cout << "udata->serverFd: " << udata->serverFd << endl;
+        eventHandler.handle(kq, eventList[i]);
       }
     }
   }
@@ -93,7 +99,6 @@ class WebServ {  // 역할: kqueue 이벤트를 받아서 각각 요청이 들�
 
  private:
   HttpConfig mConfig;
-  // mHttpServerMap[fd]
   map<FD, HttpServer> mHttpServerMap;
   vector<UData *> udataList;
 };
