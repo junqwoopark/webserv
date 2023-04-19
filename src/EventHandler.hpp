@@ -71,11 +71,42 @@ class EventHandler {
       case CloseSocket:
         closeSocketEventHandler(kq, event);
         break;
-      case Error:
-        errorHandler(kq, event);
-        break;
+        // case Error:
+        //   errorHandler(kq, event);
+        //   break;
     }
   };
+
+  void handleError(int kq, struct kevent &event, string errorCode) {
+    cout << "handleError" << errorCode << endl;
+    UData *udata = (UData *)event.udata;
+
+    string &root = udata->serverConfig->rootPath;
+    vector<string> &errorPageList = udata->serverConfig->errorPageList;
+
+    for (int i = 0; i < errorPageList.size(); i++) {
+      if (errorPageList[i].substr(0, errorCode.length()) == errorCode) {
+        string errorFilePath = root + '/' + errorPageList[i].substr(errorCode.length() + 1);
+        cout << "errorFilePath: " << errorFilePath << endl;
+        int errorFileFd = open(errorFilePath.c_str(), O_RDONLY);
+        if (errorFileFd < 0) continue;
+
+        udata->serverFd = errorFileFd;
+        udata->ioEventState = ReadFile;
+        EV_SET(&event, udata->serverFd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, udata);
+        kevent(kq, &event, 1, NULL, 0, NULL);
+        return;
+      }
+    }
+
+    // 못찾았다!
+    // setError 해주고, WriteClient로 바꿔주면 끝.
+    udata->response.setError(atoi(errorCode.c_str()));
+    udata->ioEventState = WriteClient;
+
+    EV_SET(&event, udata->clientFd, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, udata);
+    kevent(kq, &event, 1, NULL, 0, NULL);
+  }
 
  private:
   void connectClientEventHandler(int kq, struct kevent &event) {
@@ -113,7 +144,7 @@ class EventHandler {
     setTimer(kq, udata); /* 타이머 초기화 */
 
     // cout << udata->clientFd << " " << string(buffer, readSize) << endl;
-    udata->request.append(buffer, readSize);
+    udata->request.append(buffer, readSize, udata->serverConfig->maxClientBodySize);
     cout << string(buffer, readSize) << endl;
     if (!udata->request.isComplete())
       return; /* Todo: header, body size 체크 및 body 계속 받을 수 있게 하기 data를 사용해야할듯*/
@@ -145,22 +176,23 @@ class EventHandler {
   void readFileEventHandler(int kq, struct kevent &event) {
     cout << "readFileEventHandler" << endl;
     UData *udata = (UData *)event.udata;
-    char buffer[1024];
-    int readSize = read(udata->serverFd, buffer, 1024);  // NON_BLOCK
-    cout << readSize << endl;
-    if (readSize == 1024) udata->response.append(buffer, readSize);
+    char buffer[event.data];
+    int readSize = read(udata->serverFd, buffer, event.data);  // NON_BLOCK
+                                                               // cout << readSize << endl;
+    // if (readSize == 1024) udata->response.append(buffer, readSize);
 
     // cout << udata->response << endl;
-    else {
-      udata->response.append(buffer, readSize);
-      udata->ioEventState = WriteClient;
+    udata->response.append(buffer, readSize);
+    cout << "appended" << endl;
+    // if (event.flags & EV_EOF) {
+    cout << "EOF" << endl;
+    udata->ioEventState = WriteClient;
 
-      struct kevent event;
-      EV_SET(&event, udata->clientFd, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, udata);
-      kevent(kq, &event, 1, NULL, 0, NULL);
+    EV_SET(&event, udata->clientFd, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, udata);
+    kevent(kq, &event, 1, NULL, 0, NULL);
 
-      close(udata->serverFd);
-    }
+    close(udata->serverFd);
+    // }
   }
 
   // readFileEventHandler와 동일
@@ -194,9 +226,10 @@ class EventHandler {
   void writeClientEventHandler(int kq, struct kevent &event) {
     cout << "writeClientEventHandler" << endl;
     UData *udata = (UData *)event.udata;
-    string mResponse = udata->response.getResponse();
+    vector<char> mResponse = udata->response.getResponse();
 
-    int x = write(udata->clientFd, mResponse.c_str(), mResponse.size());
+    int x = write(udata->clientFd, mResponse.begin().base(), mResponse.size());
+    cout << x << endl;
     if (x < 0) {
       cout << "write error" << endl;
     }
@@ -253,19 +286,19 @@ class EventHandler {
     delete udata;
   }
 
-  void errorHandler(int kq, struct kevent &event) {
-    UData *udata = (UData *)event.udata;
-    cout << "error handler" << endl;
-    string mResponse =
-        "HTTP/1.1 404 Not Found\r\n"
-        "Content-Type: text/html\r\n"
-        "Content-Length: 15\r\n\r\n"
-        "404 Not Found\r\n";
+  // void errorHandler(int kq, struct kevent &event) {
+  //   UData *udata = (UData *)event.udata;
+  //   cout << "error handler" << endl;
+  //   string mResponse =
+  //       "HTTP/1.1 404 Not Found\r\n"
+  //       "Content-Type: text/html\r\n"
+  //       "Content-Length: 15\r\n\r\n"
+  //       "404 Not Found\r\n";
 
-    // 에러 파일이 있으면 그 파일 보내주고, 없으면 우리가 지정한 에러 메시지 보내주기
-    write(udata->clientFd, mResponse.c_str(), mResponse.size());
-    udata->ioEventState = CloseSocket;
-  }
+  //   // 에러 파일이 있으면 그 파일 보내주고, 없으면 우리가 지정한 에러 메시지 보내주기
+  //   write(udata->clientFd, mResponse.c_str(), mResponse.size());
+  //   udata->ioEventState = CloseSocket;
+  // }
 
  private:
   void setTimer(int kq, UData *udata) {
@@ -296,17 +329,13 @@ class EventHandler {
     LocationConfig *locationConfig = (LocationConfig *)result.first;
 
     if (locationConfig == NULL) {
-      udata->response.setStatusCode(404);
-      return Error;
+      throw "404";
     }
 
     // 메소드가 있는지 확인
     vector<std::string> &limitExceptList = locationConfig->limitExceptList;
     vector<std::string>::iterator it = find(limitExceptList.begin(), limitExceptList.end(), method);
-    if (it == limitExceptList.end()) {
-      udata->response.setStatusCode(405);
-      return Error;
-    }
+    if (it == limitExceptList.end()) throw "405";
 
     /* !Todo: path를 갈아끼우는 것으로 대체해야함. */
     string path = locationConfig->rootPath + result.second;
@@ -314,14 +343,11 @@ class EventHandler {
 
     // 파일이 .py로 끝나면 cgi로 처리
     if (path.find(".py") != string::npos) {
-      if (access(path.c_str(), F_OK) == -1) {
-        udata->response.setStatusCode(404);
-        return Error;
-      }
+      if (access(path.c_str(), F_OK) == -1) throw "404";
       if (method == "GET") {
         cout << "cgi get" << endl;
-        // read pipe하고, 읽기 부분 non_block하고, fork뜨고 안쓰는 부분 닫고, dup2때리고, execve에 query_string 넣어주면
-        // 될듯? read를 이벤트 등록까지
+        // read pipe하고, 읽기 부분 non_block하고, fork뜨고 안쓰는 부분 닫고, dup2때리고, execve에 query_string
+        // 넣어주면 될듯? read를 이벤트 등록까지
         int fd[2];
         pipe(fd);
         fcntl(fd[0], F_SETFL, O_NONBLOCK);
@@ -384,22 +410,25 @@ class EventHandler {
         return WriteCgi;
       } else {
         udata->response.setStatusCode(405);
-        return Error;
+        throw "405";
       }
     }
 
-    if (path.find(".php") != string::npos) {
-      if (method == "GET") {
-        udata->response.setStatusCode(200);
-        return WriteCgi;
-      } else if (method == "POST") {
-        udata->response.setStatusCode(200);
-        return WriteCgi;
-      } else {
-        udata->response.setStatusCode(405);
-        return Error;
-      }
-    }
+    // ext에 따라 Content-Type 설정
+    string ext = path.substr(path.find_last_of(".") + 1);
+    udata->response.setContentType(ext);
+
+    // if (path.find(".php") != string::npos) {
+    //   if (method == "GET") {
+    //     udata->response.setStatusCode(200);
+    //     return WriteCgi;
+    //   } else if (method == "POST") {
+    //     udata->response.setStatusCode(200);
+    //     return WriteCgi;
+    //   } else {
+    //     throw "405";
+    //   }
+    // }
 
     // 2. redirect 가 있으면 redirect 처리
     if (!locationConfig->returnRedirectList.empty()) { /* !Todo: Redirect 처리 */
@@ -442,64 +471,22 @@ class EventHandler {
 
           return WriteClient;
         } else {
-          udata->response.setStatusCode(403);
-          return Error;
+          throw "403";
         }
       } else if (errno == ENOENT) {
-        udata->response.setStatusCode(404);
-        errno = 0;
-        // cout << "404 Not Found" << endl;
-        return Error;
+        throw "404";
       }
       return ReadFile;
     } else if (method == "POST") {
       udata->serverFd = open(path.c_str(), O_RDWR | O_CREAT | O_TRUNC, 0644);
-      if (errno == EISDIR) {
-        udata->response.setStatusCode(403);
-        errno = 0;
-        return Error;
-      }
+      if (errno == EISDIR) throw "403";
       return WriteFile;
     } else if (method == "DELETE") {
-      if (unlink(path.c_str()) == -1) {
-        udata->response.setStatusCode(404);
-        cout << "DELETE ERROR" << endl;
-        return Error;
-      }
+      if (unlink(path.c_str()) == -1) throw "404";
+
       return WriteClient;
     }
 
     return ReadFile;
-  }
-
-  int createCgiSocket(std::string &fastCgiPass) {
-    int serverFd = socket(AF_INET, SOCK_STREAM, 0);
-    if (serverFd < 0) {
-      cout << "socket error" << endl;
-      return -1;
-    }
-
-    cout << "serverFd: " << serverFd << endl;
-
-    // fastCgiPass = 127.0.0.1:9000
-    std::string ip = fastCgiPass.substr(0, fastCgiPass.find(":"));
-    std::string port = fastCgiPass.substr(fastCgiPass.find(":") + 1, fastCgiPass.size());
-    cout << ip << endl;
-    cout << port << endl;
-
-    struct sockaddr_in serverAddr;
-    serverAddr.sin_family = AF_INET;
-    serverAddr.sin_port = htons(atoi(port.c_str()));
-    serverAddr.sin_addr.s_addr = inet_addr(ip.c_str());
-
-    if (connect(serverFd, (struct sockaddr *)&serverAddr, sizeof(serverAddr)) < 0) {
-      cout << "connect error" << endl;
-      close(serverFd);
-      return -1;
-    }
-    cout << "connect success" << endl;
-    fcntl(serverFd, F_SETFL, O_NONBLOCK);
-
-    return serverFd;
   }
 };

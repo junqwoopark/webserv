@@ -25,11 +25,22 @@ struct LocationConfig {
 struct ServerConfig {
   vector<string> serverName;  // 여러개 받을려고 해놓은 것 같긴 함
   string serverHost;
+  string rootPath;
   vector<string> errorPageList;
   size_t serverPort;
   size_t maxClientBodySize;
   vector<LocationConfig> locationConfigList;  // 시간..?
   Trie locationConfigTrie;
+
+  ServerConfig() {
+    serverName = vector<string>();
+    serverHost = "";
+    errorPageList = vector<string>();
+    serverPort = 0;
+    maxClientBodySize = 1 * 1024 * 1024;
+    locationConfigList = vector<LocationConfig>();
+    locationConfigTrie = Trie();
+  }
 
   void buildLocationConfigTrie() {
     for (int i = 0; i < locationConfigList.size(); i++) {
@@ -136,6 +147,8 @@ void HttpConfig::GetServerValue(string &value) {  // 이거 짜다가 호스트 
     mServerConfigList.back().serverName.push_back(value);
   } else if (mKey == "listen") {
     mServerConfigList.back().serverPort = atoi(value.c_str());
+  } else if (mKey == "root") {
+    mServerConfigList.back().rootPath = value;
   } else if (mKey == "error_page") {
     if (value.size() < 3) {
       throw invalid_argument("error_page is not valid");
@@ -155,7 +168,7 @@ void HttpConfig::GetServerValue(string &value) {  // 이거 짜다가 호스트 
     for (int i = 0; i < value.length(); i++) {
       if (!isdigit(value[i])) throw invalid_argument("client_max_body_size is not valid");
     }
-    mServerConfigList.back().maxClientBodySize = atoi(value.c_str());
+    mServerConfigList.back().maxClientBodySize = atoi(value.c_str()) * 1024 * 1024;
   }
 }
 

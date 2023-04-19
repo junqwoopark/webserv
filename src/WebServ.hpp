@@ -73,7 +73,8 @@ class WebServ {  // 역할: kqueue 이벤트를 받아서 각각 요청이 들�
 
         try {
           eventHandler.handle(kq, eventList[i]);  // 여기서 에러가 남.
-        } catch (int errorCode) {                 // catch를 할거야
+        } catch (const char *errorCode) {         // catch를 할거야
+          eventHandler.handleError(kq, eventList[i], errorCode);
         }
       }
     }

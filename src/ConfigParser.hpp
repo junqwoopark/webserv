@@ -152,6 +152,8 @@ void ConfigParser::GetServerKeyFunc(Token token) {
     mStatus = GetServerValue;
   } else if (token.lexeme() == "client_max_body_size") {  // key
     mStatus = GetServerValue;
+  } else if (token.lexeme() == "root") {
+    mStatus = GetServerValue;
   } else if (token.lexeme() == "location") {  // key
     mStatus = GetLocation;
   } else {
