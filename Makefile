@@ -1,4 +1,4 @@
-CXX = g++
+CXX = c++
 CFLAGS = -Wextra -Wall -Werror -std=c++98
 
 INCLUDES = -Isrc
