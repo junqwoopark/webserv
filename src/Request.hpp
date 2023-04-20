@@ -38,7 +38,6 @@ class Request {
       } else if (headerEnd != string::npos) {  // 찾은 경우...
         parseHeader();
 
-        cout << mBuffer << endl;
         mBuffer = mBuffer.substr(headerEnd + 4);  // 헤더 뒤에 남은 body
         mIsHeaderComplete = true;
       }
@@ -48,7 +47,6 @@ class Request {
       if (mIsChunked) {
         mBuffer.append(buffer, size);
         while (true) {
-          cout << "Chunked mBuffer: " << mBuffer << endl;
           size_t chunkEnd = mBuffer.find("\r\n");
           if (chunkEnd == string::npos) {
             break;
@@ -150,7 +148,6 @@ class Request {
       mHeaders[key] = value;
 
       if (key == "Transfer-Encoding" && value == "chunked") {
-        cout << "chunked" << endl;
         mIsChunked = true;
       }
     }

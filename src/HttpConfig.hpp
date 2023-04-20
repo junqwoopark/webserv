@@ -217,6 +217,6 @@ void HttpConfig::GetLocationValue(string &value) {
 
 void HttpConfig::CloseLocationBlock() {}
 
-void HttpConfig::CloseServerBlock() { cout << "CloseServerBlock" << endl; }
+void HttpConfig::CloseServerBlock() {}
 
 void HttpConfig::CloseHttpBlock() {}

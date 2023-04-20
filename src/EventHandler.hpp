@@ -35,7 +35,6 @@ class EventHandler {
     UData *udata = (UData *)event.udata;
 
     if (event.filter == EVFILT_TIMER && udata->cgiPid) {
-      cout << "cgi timeout!!!!!!!!!!!!!!!!!!" << endl;
       close(udata->cgiFd[READ]);
       kill(udata->cgiPid, SIGKILL);
       throw "500";
@@ -74,7 +73,6 @@ class EventHandler {
   };
 
   void handleError(int kq, struct kevent &event, string errorCode) {
-    cout << "handleError" << errorCode << endl;
     UData *udata = (UData *)event.udata;
 
     string &root = udata->serverConfig->rootPath;
@@ -83,7 +81,6 @@ class EventHandler {
     for (size_t i = 0; i < errorPageList.size(); i++) {
       if (errorPageList[i].substr(0, errorCode.length()) == errorCode) {
         string errorFilePath = root + '/' + errorPageList[i].substr(errorCode.length() + 1);
-        cout << "errorFilePath: " << errorFilePath << endl;
         int errorFileFd = open(errorFilePath.c_str(), O_RDONLY);
         if (errorFileFd < 0) continue;
 
@@ -108,7 +105,6 @@ class EventHandler {
 
  private:
   void connectClientEventHandler(int kq, struct kevent &event) {
-    cout << "connectClientEventHandler" << endl;
     UData *udata = (UData *)event.udata;
     ServerConfig *serverConfig = udata->serverConfig;
 
@@ -130,7 +126,6 @@ class EventHandler {
   }
 
   void readClientEventHandler(int kq, struct kevent &event) {
-    cout << "readClientEventHandler" << endl;
     UData *udata = (UData *)event.udata;
     char buffer[event.data];
     int readSize = read(udata->clientFd, buffer, event.data);
@@ -138,7 +133,6 @@ class EventHandler {
     setTimer(kq, udata); /* 타이머 초기화 */
 
     udata->request.append(buffer, readSize, udata->serverConfig->maxClientBodySize);
-    cout << string(buffer, readSize) << endl;
     if (!udata->request.isComplete()) return;
 
     deleteTimer(kq, udata); /* 타이머 삭제 */
@@ -172,7 +166,6 @@ class EventHandler {
   }
 
   void readFileEventHandler(int kq, struct kevent &event) {
-    cout << "readFileEventHandler" << endl;
     UData *udata = (UData *)event.udata;
 
     char buffer[1024];
@@ -194,7 +187,6 @@ class EventHandler {
 
   // readFileEventHandler와 동일
   void readCgiEventHandler(int kq, struct kevent &event) {
-    cout << "readCgiEventHandler" << endl;
     UData *udata = (UData *)event.udata;
     intptr_t data = event.data;
     char buffer[data];
@@ -217,7 +209,6 @@ class EventHandler {
   }
 
   void writeClientEventHandler(struct kevent &event) {
-    cout << "writeClientEventHandler" << endl;
     UData *udata = (UData *)event.udata;
     vector<char> mResponse = udata->response.getResponse();
 
@@ -235,7 +226,6 @@ class EventHandler {
 
   // Post 요청일 때
   void writeFileEventHandler(int kq, struct kevent &event) {
-    cout << "writeFileEventHandler" << endl;
     UData *udata = (UData *)event.udata;
 
     size_t writeSize = write(udata->serverFd, udata->request.getBody().c_str(), udata->request.getBody().size());
@@ -251,7 +241,6 @@ class EventHandler {
   }
 
   void writeCgiEventHandler(int kq, struct kevent &event) {
-    cout << "writeCgiEventHandler" << endl;
     UData *udata = (UData *)event.udata;
     intptr_t data = event.data;
     String &body = udata->request.getBody();
@@ -261,9 +250,7 @@ class EventHandler {
       body = body.substr(data);
       return;
     }
-    cout << udata->serverFd << endl;
     write(udata->serverFd, body.c_str(), body.size());
-    cout << "write end" << endl;
     body.clear();
 
     // close(udata->cgiFd[1]);
@@ -280,7 +267,6 @@ class EventHandler {
   }
 
   void closeSocketEventHandler(struct kevent &event) {
-    cout << "closeSocketEventHandler" << endl;
     UData *udata = (UData *)event.udata;
     close(udata->clientFd);
     delete udata;
@@ -321,7 +307,6 @@ class EventHandler {
     if (it == limitExceptList.end()) throw "405";
 
     string path = locationConfig->rootPath + result.second;
-    cout << "path: " << path << endl;
 
     // 파일이 .py로 끝나면 cgi로 처리
     if (path.find(".py") != string::npos) {
@@ -373,7 +358,6 @@ class EventHandler {
           content_length = "CONTENT_LENGTH=" + content_length;
           string query_string = udata->request.getQueryString();
           query_string = "QUERY_STRING=" + query_string;
-          cout << "query_string: " << query_string << endl;
           char *argv[] = {(char *)path.c_str(), NULL};
           char *envp[] = {(char *)query_string.c_str(), (char *)content_length.c_str(), NULL};
           execve(argv[0], argv, envp);
@@ -397,21 +381,7 @@ class EventHandler {
     string ext = path.substr(path.find_last_of(".") + 1);
     udata->response.setContentType(ext);
 
-    // if (path.find(".php") != string::npos) {
-    //   if (method == "GET") {
-    //     udata->response.setStatusCode(200);
-    //     return WriteCgi;
-    //   } else if (method == "POST") {
-    //     udata->response.setStatusCode(200);
-    //     return WriteCgi;
-    //   } else {
-    //     throw "405";
-    //   }
-    // }
-
-    // 2. redirect 가 있으면 redirect 처리
     if (!locationConfig->returnRedirectList.empty()) { /* !Todo: Redirect 처리 */
-      cout << "redirect" << endl;
       udata->response.setStatusCode(atoi(locationConfig->returnRedirectList[0].c_str()));
       udata->response.setLocation(locationConfig->returnRedirectList[1]);
       return WriteClient;
@@ -419,19 +389,14 @@ class EventHandler {
 
     // 3. 없으면 그냥 보내고,,,
 
-    /* cgi 인지 확인 */
-    cout << "method: " << method << endl;
     if (method == "GET") {
-      cout << "path.c_str(): " << path.c_str() << endl;
       errno = 0;
       udata->serverFd = open(path.c_str(), O_RDWR);
-      cout << "errno: " << errno << endl;
       if (errno == EISDIR) { /* Todo: Index 파일 체크 + autoindex 확인 */
         if (!locationConfig->indexList.empty()) {
           for (size_t i = 0; i < locationConfig->indexList.size(); i++) {
             string &index = locationConfig->indexList[i];
             string index_path = path + '/' + index;
-            cout << "index_path: " << index_path << endl;
             udata->serverFd = open(index_path.c_str(), O_RDWR);
             if (udata->serverFd != -1) return ReadFile;
           }
