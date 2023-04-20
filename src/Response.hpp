@@ -31,8 +31,10 @@ class Response {
     stringstream response;
     response << "HTTP/1.1 " << mStatusCode << " " << mStatusCodes[mStatusCode] << "\r\n";
     response << "Content-Length: " << mBody.size() << "\r\n";
-    response << "Content-Type: " << mMime[mContentType] << "\r\n";
-    response << "Location: " << mLocation << "\r\n";
+    response << "Content-Type: " << (mMime[mContentType] == "" ? "text/html" : mMime[mContentType]) << "\r\n";
+
+    if (mLocation != "") response << "Location: " << mLocation << "\r\n";
+
     response << "\r\n";
 
     string header = response.str();
@@ -42,7 +44,6 @@ class Response {
     return result;
   }
 
- public:
  private:
   int mStatusCode;
   string mContentType;

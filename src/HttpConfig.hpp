@@ -43,7 +43,7 @@ struct ServerConfig {
   }
 
   void buildLocationConfigTrie() {
-    for (int i = 0; i < locationConfigList.size(); i++) {
+    for (size_t i = 0; i < locationConfigList.size(); i++) {
       locationConfigTrie.insert(locationConfigList[i].path, &locationConfigList[i]);
     }
   }
@@ -51,34 +51,34 @@ struct ServerConfig {
 
 ostream &operator<<(ostream &os, const ServerConfig &serverConfig) {
   os << "server_name: ";
-  for (int i = 0; i < serverConfig.serverName.size(); i++) {
+  for (size_t i = 0; i < serverConfig.serverName.size(); i++) {
     os << serverConfig.serverName[i] << ' ';
   }
   os << endl;
   os << "server_host: " << serverConfig.serverHost << endl;
   os << "server_port: " << serverConfig.serverPort << endl;
   os << "default_error_page: ";
-  for (int i = 0; i < serverConfig.errorPageList.size(); i++) {
+  for (size_t i = 0; i < serverConfig.errorPageList.size(); i++) {
     os << serverConfig.errorPageList[i] << ' ';
   }
   os << endl;
   os << "max_client_body_size: " << serverConfig.maxClientBodySize << endl;
   os << "location_config_list: " << endl;
-  for (int i = 0; i < serverConfig.locationConfigList.size(); i++) {
+  for (size_t i = 0; i < serverConfig.locationConfigList.size(); i++) {
     os << "  path: " << serverConfig.locationConfigList[i].path << endl;
     os << "  root_path: " << serverConfig.locationConfigList[i].rootPath << endl;
     os << "  return_redirect: ";
-    for (int j = 0; j < serverConfig.locationConfigList[i].returnRedirectList.size(); j++) {
+    for (size_t j = 0; j < serverConfig.locationConfigList[i].returnRedirectList.size(); j++) {
       os << serverConfig.locationConfigList[i].returnRedirectList[j] << ' ';
     }
     os << endl;
     os << "  limit_except_list: ";
-    for (int j = 0; j < serverConfig.locationConfigList[i].limitExceptList.size(); j++) {
+    for (size_t j = 0; j < serverConfig.locationConfigList[i].limitExceptList.size(); j++) {
       os << serverConfig.locationConfigList[i].limitExceptList[j] << ' ';
     }
     os << endl;
     os << "  index_list: ";
-    for (int j = 0; j < serverConfig.locationConfigList[i].indexList.size(); j++) {
+    for (size_t j = 0; j < serverConfig.locationConfigList[i].indexList.size(); j++) {
       os << serverConfig.locationConfigList[i].indexList[j] << ' ';
     }
     os << endl;
@@ -121,7 +121,7 @@ class HttpConfig {
   void CloseHttpBlock();
 
   friend ostream &operator<<(ostream &os, const HttpConfig &httpConfig) {
-    for (int i = 0; i < httpConfig.mServerConfigList.size(); i++) {
+    for (size_t i = 0; i < httpConfig.mServerConfigList.size(); i++) {
       os << httpConfig.mServerConfigList[i] << endl;
     }
     return os;
@@ -165,7 +165,7 @@ void HttpConfig::GetServerValue(string &value) {  // 이거 짜다가 호스트 
     }
     mServerConfigList.back().errorPageList.push_back(value);
   } else if (mKey == "client_max_body_size") {
-    for (int i = 0; i < value.length(); i++) {
+    for (size_t i = 0; i < value.length(); i++) {
       if (!isdigit(value[i])) throw invalid_argument("client_max_body_size is not valid");
     }
     mServerConfigList.back().maxClientBodySize = atoi(value.c_str()) * 1024 * 1024;
@@ -201,7 +201,7 @@ void HttpConfig::GetLocationValue(string &value) {
       throw invalid_argument("limit_except is not valid");
   } else if (mKey == "return") {
     if (locationConfig.returnRedirectList.size() == 0) {
-      for (int i = 0; i < value.length(); i++) {
+      for (size_t i = 0; i < value.length(); i++) {
         if (!isdigit(value[i])) throw invalid_argument("return is not valid");
       }
       locationConfig.returnRedirectList.push_back(value);

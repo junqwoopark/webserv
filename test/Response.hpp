@@ -6,7 +6,7 @@
 using namespace std;
 
 class Response {
-public:
+ public:
   Response() {}
   ~Response() {}
 
@@ -22,7 +22,7 @@ public:
     return response;
   }
 
-private:
+ private:
   int mStatusCode;
   string mBody;
 };

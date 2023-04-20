@@ -69,8 +69,6 @@ class WebServ {  // 역할: kqueue 이벤트를 받아서 각각 요청이 들�
           throw runtime_error("kevent error");
         }
 
-        UData *udata = (UData *)eventList[i].udata;
-
         try {
           eventHandler.handle(kq, eventList[i]);  // 여기서 에러가 남.
         } catch (const char *errorCode) {         // catch를 할거야
@@ -89,7 +87,7 @@ class WebServ {  // 역할: kqueue 이벤트를 받아서 각각 요청이 들�
  private:
   void initHttpServers(HttpConfig &httpConfig) {
     vector<ServerConfig> &serverConfigList = httpConfig.getServerConfigList();
-    for (int i = 0; i < serverConfigList.size(); i++) {
+    for (size_t i = 0; i < serverConfigList.size(); i++) {
       HttpServer httpServer(serverConfigList[i]);
       mHttpServerMap[httpServer.getServerSocketFd()] = httpServer;
     }

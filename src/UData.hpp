@@ -27,6 +27,7 @@ struct UData {
     this->clientFd = clientFd;
     this->ioEventState = ioEventState;
     this->cgiPid = 0;
+    this->writeOffset = 0;
 
     this->serverConfig = serverConfig;
 
@@ -38,6 +39,9 @@ struct UData {
   int clientFd;  // 클라이언트와 통신하는 fd
   int cgiFd[2];  // cgi와 통신하는 fd
   int cgiPid;
+
+  size_t readFileSize;
+  size_t writeOffset;
 
   Request request;
   Response response;

@@ -6,6 +6,9 @@
 #include <mutex>
 #include <sstream>
 #include <string>
+#include <vector>
+
+#include "String.hpp"
 
 #define MAX_HEADER_SIZE 8092 * 1024
 
@@ -23,31 +26,21 @@ class Request {
     mIsChunked = false;
   }
 
-  // 헤더가 잘 들어왔는지 판단 rnrn, header_max_size = 8k
-  // timeout 혹은 ioState = error
-
-  // body가 size 에 맞게 잘들어왔는지 판단
-  // ioState = error
-
   void append(char *buffer, size_t size, size_t maxClientBodySize) {
     if (!mIsHeaderComplete) {
       mBuffer.append(buffer, size);
       size = 0;
       size_t headerEnd = mBuffer.find("\r\n\r\n");
       if (headerEnd == string::npos && mBuffer.size() > MAX_HEADER_SIZE) {  // 헤더가 완성되지 않았을 때
-        cout << "header not complete" << endl;
-        // error handle
+        throw "400";
       } else if (headerEnd != string::npos && headerEnd > MAX_HEADER_SIZE) {  // 헤더가 완성되었는데 너무 클 때,
-        cout << "header too big" << endl;
-        // error handle
+        throw "400";
       } else if (headerEnd != string::npos) {  // 찾은 경우...
         parseHeader();
 
         cout << mBuffer << endl;
         mBuffer = mBuffer.substr(headerEnd + 4);  // 헤더 뒤에 남은 body
         mIsHeaderComplete = true;
-        // cout << "mBuffer: " << mBuffer << endl;
-        cout << "header complete" << endl;
       }
     }
 
@@ -72,8 +65,7 @@ class Request {
 
           // Check if the chunk size exceeds the maximum allowed body size
           if (mBody.size() + chunkSize > maxClientBodySize) {
-            // error handle
-            break;
+            throw "413";
           }
 
           // Extract the current chunk and append it to the body
@@ -84,19 +76,18 @@ class Request {
           }
           mBody.append(mBuffer.substr(chunkStart, chunkSize));
           mBuffer = mBuffer.substr(chunkDataEnd + 2);  // Move past the \r\n after the chunk data
-          cout << "mBody: " << mBody << endl;
         }
       } else {
         mBuffer.append(buffer, size);
-        size_t contentLength = stoi(mHeaders["Content-Length"]);
+        size_t contentLength = atoi(mHeaders["Content-Length"].c_str());
+
         if (contentLength > maxClientBodySize) {
-          // error handle
+          throw "413";
         }
         if (mBuffer.length() > maxClientBodySize) {
-          // error handle
+          throw "413";
         }
-        cout << "mBuffer.length : " << mBuffer.length() << endl;
-        cout << "contentLength : " << contentLength << endl;
+
         if (mBuffer.length() == contentLength) {
           mBody.append(mBuffer);
           mIsBodyComplete = true;
@@ -112,7 +103,7 @@ class Request {
   string getUri() { return mUri; }
   string getHttpVersion() { return mHttpVersion; }
   string getHeader(const string &key) { return mHeaders[key]; }
-  string &getBody() { return mBody; }
+  String &getBody() { return mBody; }
   string getServerName() { return mHeaders["Host"].substr(0, mHeaders["Host"].find(":")); }
   string getQueryString() {
     if (mQueryString.empty()) {
@@ -123,12 +114,12 @@ class Request {
 
  private:
   void parseHeader() {
-    stringstream ss(mBuffer);
+    stringstream ss(mBuffer.c_str());
     string line;
     getline(ss, line);
     parseRequestLine(line);
     parseHeaders(ss);
-    // parseBody(ss);
+
     parseUri();
   }
   void parseRequestLine(const string &line) {
@@ -138,31 +129,14 @@ class Request {
     getline(ss, mHttpVersion, ' ');
   }
 
-  // void parseHeaders(stringstream &ss) {
-  //   string line;
-  //   while (getline(ss, line) && line != "\r") {
-  //     int colonIndex = line.find(":");
-  //     string key = line.substr(0, colonIndex);
-  //     string value = line.substr(colonIndex + 1);
-  //     mHeaders[key] = value;
-  //   }
-  // }
-
   void parseUri() {
-    int questionIndex = mUri.find("?");
+    size_t questionIndex = mUri.find("?");
     if (questionIndex == string::npos) {
       return;
     }
     mQueryString = mUri.substr(questionIndex + 1);
     mUri = mUri.substr(0, questionIndex);
   }
-
-  // void parseBody(stringstream &ss) {
-  //   string line;
-  //   while (getline(ss, line)) {
-  //     mBody += line;
-  //   }
-  // }
 
   void parseHeaders(stringstream &ss) {
     string line;
@@ -171,7 +145,6 @@ class Request {
       string key = line.substr(0, colonIndex);
       string value = line.substr(colonIndex + 2);
 
-      // Remove the \r from the end of the value
       value = value.substr(0, value.length() - 1);
 
       mHeaders[key] = value;
@@ -183,42 +156,12 @@ class Request {
     }
   }
 
-  // Add a new method to parse chunked body
-  void parseChunkedBody(stringstream &ss) {
-    string line;
-    size_t chunkSize = 0;
-    while (getline(ss, line)) {
-      if (chunkSize == 0) {
-        chunkSize = std::stoi(line, nullptr, 16);
-        if (chunkSize == 0) {
-          break;
-        }
-        continue;
-      }
-
-      mBody += line.substr(0, chunkSize);
-      chunkSize = 0;
-    }
-  }
-
-  // Update the parseBody method
-  void parseBody(stringstream &ss) {
-    if (mIsChunked) {
-      parseChunkedBody(ss);
-    } else {
-      string line;
-      while (getline(ss, line)) {
-        mBody += line;
-      }
-    }
-  }
-
-  string mBuffer;
+  String mBuffer;
   string mMethod;
   string mUri;
   string mHttpVersion;
   map<string, string> mHeaders;
-  string mBody;
+  String mBody;
   string mQueryString;
   bool mIsChunked;
   bool mIsHeaderComplete;

@@ -83,7 +83,7 @@ class Trie {
 
     Node* cur = root;
 
-    for (int i = 0; i < path.size(); i++) {
+    for (size_t i = 0; i < path.size(); i++) {
       char name = path[i];
       if (cur->children.find(name) == cur->children.end()) {
         cur->children[name] = new Node();
@@ -99,7 +99,7 @@ class Trie {
     void* data = NULL;
     int idx = 0;
 
-    for (int i = 0; i < path.size(); i++) {
+    for (size_t i = 0; i < path.size(); i++) {
       char name = path[i];
       if (cur->children.find(name) == cur->children.end()) {
         break;
