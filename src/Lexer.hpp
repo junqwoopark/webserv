@@ -48,7 +48,7 @@ class Lexer {
   }
 
  private:
-  char peek() const { return *mBeg; }  // 보는거
-  char get() { return *mBeg++; }       // 보고 넘기는거
+  char peek() const { return *mBeg; }
+  char get() { return *mBeg++; }
   const char *mBeg;
 };

@@ -31,14 +31,14 @@ class Request {
       mBuffer.append(buffer, size);
       size = 0;
       size_t headerEnd = mBuffer.find("\r\n\r\n");
-      if (headerEnd == string::npos && mBuffer.size() > MAX_HEADER_SIZE) {  // 헤더가 완성되지 않았을 때
+      if (headerEnd == string::npos && mBuffer.size() > MAX_HEADER_SIZE) {
         throw "400";
-      } else if (headerEnd != string::npos && headerEnd > MAX_HEADER_SIZE) {  // 헤더가 완성되었는데 너무 클 때,
+      } else if (headerEnd != string::npos && headerEnd > MAX_HEADER_SIZE) {
         throw "400";
-      } else if (headerEnd != string::npos) {  // 찾은 경우...
+      } else if (headerEnd != string::npos) {
         parseHeader();
 
-        mBuffer = mBuffer.substr(headerEnd + 4);  // 헤더 뒤에 남은 body
+        mBuffer = mBuffer.substr(headerEnd + 4);
         mIsHeaderComplete = true;
       }
     }
@@ -51,29 +51,25 @@ class Request {
           if (chunkEnd == string::npos) {
             break;
           }
-          // 숫자\r\n데이터\r\n
 
-          // Extract the chunk size and convert it from hex to int
           int chunkSize = strtol(mBuffer.substr(0, chunkEnd).c_str(), nullptr, 16);
-          if (chunkSize == 0) {  // End of chunked encoding
+          if (chunkSize == 0) {
             mIsBodyComplete = true;
-            mBuffer = mBuffer.substr(chunkEnd + 2);  // Move past the final \r\n
+            mBuffer = mBuffer.substr(chunkEnd + 2);
             break;
           }
 
-          // Check if the chunk size exceeds the maximum allowed body size
           if (mBody.size() + chunkSize > maxClientBodySize) {
             throw "413";
           }
 
-          // Extract the current chunk and append it to the body
           size_t chunkStart = chunkEnd + 2;
           size_t chunkDataEnd = chunkStart + chunkSize;
-          if (chunkDataEnd + 2 > mBuffer.size()) {  // Incomplete chunk
+          if (chunkDataEnd + 2 > mBuffer.size()) {
             break;
           }
           mBody.append(mBuffer.substr(chunkStart, chunkSize));
-          mBuffer = mBuffer.substr(chunkDataEnd + 2);  // Move past the \r\n after the chunk data
+          mBuffer = mBuffer.substr(chunkDataEnd + 2);
         }
       } else {
         mBuffer.append(buffer, size);

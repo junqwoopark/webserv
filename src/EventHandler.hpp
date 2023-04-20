@@ -116,7 +116,7 @@ class EventHandler {
     }
 
     fcntl(clientFd, F_SETFL, O_NONBLOCK);
-    UData *newUdata = new UData(-1, clientFd, serverConfig, ReadClient);  // serverConfig 상속
+    UData *newUdata = new UData(-1, clientFd, serverConfig, ReadClient);
     struct kevent readEvent;
 
     EV_SET(&readEvent, clientFd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, newUdata);
@@ -130,12 +130,12 @@ class EventHandler {
     char buffer[event.data];
     int readSize = read(udata->clientFd, buffer, event.data);
 
-    setTimer(kq, udata); /* 타이머 초기화 */
+    setTimer(kq, udata);
 
     udata->request.append(buffer, readSize, udata->serverConfig->maxClientBodySize);
     if (!udata->request.isComplete()) return;
 
-    deleteTimer(kq, udata); /* 타이머 삭제 */
+    deleteTimer(kq, udata);
 
     EV_SET(&event, udata->clientFd, EVFILT_READ, EV_DELETE, 0, 0, udata);
     kevent(kq, &event, 1, NULL, 0, NULL);
@@ -148,9 +148,6 @@ class EventHandler {
       fstat(udata->serverFd, &fileStat);
       udata->readFileSize = fileStat.st_size;
     }
-
-    // 파일 또는 CGI 이벤트 등록
-    // struct kevent event;
 
     if (udata->ioEventState == ReadFile || udata->ioEventState == ReadCgi) {
       EV_SET(&event, udata->serverFd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, udata);
@@ -185,19 +182,19 @@ class EventHandler {
     }
   }
 
-  // readFileEventHandler와 동일
   void readCgiEventHandler(int kq, struct kevent &event) {
+    cout << "readCgiEventHandler" << endl;
     UData *udata = (UData *)event.udata;
     intptr_t data = event.data;
     char buffer[data];
-    int readSize = read(udata->serverFd, buffer, data);  // NON_BLOCK
+    int readSize = read(udata->serverFd, buffer, data);
 
-    setTimer(kq, udata); /* 타이머 초기화 */
+    setTimer(kq, udata);
 
     udata->response.append(buffer, readSize);
 
     if (event.flags & EV_EOF) {
-      deleteTimer(kq, udata); /* 타이머 삭제 */
+      deleteTimer(kq, udata);
       kill(udata->cgiPid, SIGKILL);
       udata->ioEventState = WriteClient;
 
@@ -224,7 +221,6 @@ class EventHandler {
     }
   }
 
-  // Post 요청일 때
   void writeFileEventHandler(int kq, struct kevent &event) {
     UData *udata = (UData *)event.udata;
 
@@ -250,10 +246,9 @@ class EventHandler {
       body = body.substr(data);
       return;
     }
+    cout << udata->serverFd << endl;
     write(udata->serverFd, body.c_str(), body.size());
     body.clear();
-
-    // close(udata->cgiFd[1]);
 
     EV_SET(&event, udata->serverFd, EVFILT_WRITE, EV_DELETE, 0, 0, udata);
     kevent(kq, &event, 1, NULL, 0, NULL);
@@ -301,19 +296,15 @@ class EventHandler {
       throw "404";
     }
 
-    // 메소드가 있는지 확인
     vector<std::string> &limitExceptList = locationConfig->limitExceptList;
     vector<std::string>::iterator it = find(limitExceptList.begin(), limitExceptList.end(), method);
     if (it == limitExceptList.end()) throw "405";
 
     string path = locationConfig->rootPath + result.second;
 
-    // 파일이 .py로 끝나면 cgi로 처리
     if (path.find(".py") != string::npos) {
       if (access(path.c_str(), F_OK) == -1) throw "404";
       if (method == "GET") {
-        // read pipe하고, 읽기 부분 non_block하고, fork뜨고 안쓰는 부분 닫고, dup2때리고, execve에 query_string
-        // 넣어주면 될듯? read를 이벤트 등록까지
         int fd[2];
         pipe(fd);
         fcntl(fd[0], F_SETFL, O_NONBLOCK);
@@ -332,8 +323,6 @@ class EventHandler {
         }
         return ReadCgi;
       } else if (method == "POST") {
-        // read, write 파이프 만들고, read, write 논블럭으로 하니씩 바꾸고, fork 뜨고, 안쓰는 부분 닫고, dup2때리고,
-        // execve에 content-length, query_string 넣어주고, execve하고 read, write 이벤트 등록
         int toCgi[2];
         int fromCgi[2];
 
@@ -348,7 +337,6 @@ class EventHandler {
 
         udata->cgiPid = fork();
         if (udata->cgiPid == 0) {
-          // child
           close(parent[0]);
           close(parent[1]);
           dup2(child[0], 0);
@@ -362,7 +350,6 @@ class EventHandler {
           char *envp[] = {(char *)query_string.c_str(), (char *)content_length.c_str(), NULL};
           execve(argv[0], argv, envp);
         } else {
-          // parent
           close(child[0]);
           close(child[1]);
           udata->cgiFd[0] = parent[0];
@@ -377,22 +364,19 @@ class EventHandler {
       }
     }
 
-    // ext에 따라 Content-Type 설정
     string ext = path.substr(path.find_last_of(".") + 1);
     udata->response.setContentType(ext);
 
-    if (!locationConfig->returnRedirectList.empty()) { /* !Todo: Redirect 처리 */
+    if (!locationConfig->returnRedirectList.empty()) {
       udata->response.setStatusCode(atoi(locationConfig->returnRedirectList[0].c_str()));
       udata->response.setLocation(locationConfig->returnRedirectList[1]);
       return WriteClient;
     }
 
-    // 3. 없으면 그냥 보내고,,,
-
     if (method == "GET") {
       errno = 0;
       udata->serverFd = open(path.c_str(), O_RDWR);
-      if (errno == EISDIR) { /* Todo: Index 파일 체크 + autoindex 확인 */
+      if (errno == EISDIR) {
         if (!locationConfig->indexList.empty()) {
           for (size_t i = 0; i < locationConfig->indexList.size(); i++) {
             string &index = locationConfig->indexList[i];

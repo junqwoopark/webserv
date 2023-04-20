@@ -13,7 +13,6 @@ using namespace std;
 
 class Response {
  public:
-  // Response() {}
   Response(int statusCode = 200) : mStatusCode(statusCode) {}
   ~Response() {}
 

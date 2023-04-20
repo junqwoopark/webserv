@@ -23,7 +23,7 @@ typedef int FD;
 
 using namespace std;
 
-class WebServ {  // 역할: kqueue 이벤트를 받아서 각각 요청이 들어온 http 서버로 이벤트를 전달.
+class WebServ {
  public:
   WebServ(HttpConfig &httpConfig) { initHttpServers(httpConfig); }
   virtual ~WebServ() {
@@ -41,18 +41,16 @@ class WebServ {  // 역할: kqueue 이벤트를 받아서 각각 요청이 들�
 
     struct kevent event;
 
-    // kqueue에 등록
     for (map<FD, HttpServer>::iterator it = mHttpServerMap.begin(); it != mHttpServerMap.end(); it++) {
       int fd = it->second.getServerSocketFd();
       ServerConfig *serverConfig = &it->second.getServerConfig();
       serverConfig->buildLocationConfigTrie();
 
-      UData *udata = new UData(fd, -1, serverConfig, ConnectClient);  // serverConfig 설정
+      UData *udata = new UData(fd, -1, serverConfig, ConnectClient);
       EV_SET(&event, fd, EVFILT_READ, EV_ADD, 0, 0, udata);
       if (kevent(kq, &event, 1, NULL, 0, NULL) == -1) {
         throw runtime_error("kevent error");
       }
-      // (serverSocket : 설정)이 매핑되게 해야할 것 같거든?
     }
 
     EventHandler eventHandler;
@@ -70,8 +68,8 @@ class WebServ {  // 역할: kqueue 이벤트를 받아서 각각 요청이 들�
         }
 
         try {
-          eventHandler.handle(kq, eventList[i]);  // 여기서 에러가 남.
-        } catch (const char *errorCode) {         // catch를 할거야
+          eventHandler.handle(kq, eventList[i]);
+        } catch (const char *errorCode) {
           eventHandler.handleError(kq, eventList[i], errorCode);
         }
       }

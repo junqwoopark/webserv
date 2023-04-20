@@ -19,7 +19,5 @@ int main(int argc, char **argv) {
   WebServ webserv(config);
   webserv.run();
 
-  // html 에코 서버?
-
   return 0;
 }

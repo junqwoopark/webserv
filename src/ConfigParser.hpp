@@ -36,7 +36,6 @@ class ConfigParser {
   };
 
   ConfigParser() : mStatus(GetHttp) {
-    // mFuncMap initialization
     mFuncMap[make_pair(GetHttp, Token::Identifier)] = &ConfigParser::GetHttpFunc;
     mFuncMap[make_pair(OpenHttpBlock, Token::LeftCurly)] = &ConfigParser::OpenHttpBlockFunc;
     mFuncMap[make_pair(GetServer, Token::Identifier)] = &ConfigParser::GetServerFunc;
@@ -103,7 +102,7 @@ class ConfigParser {
   void CloseHttpBlockFunc(Token token);
 
  private:
-  eStatus mStatus;  // mFinish인지만 확인해주면 됨.
+  eStatus mStatus;
 
   map<pair<int, Token::Kind>, void (ConfigParser::*)(Token)> mFuncMap;
   HttpConfig mHttpConfig;
@@ -144,17 +143,17 @@ void ConfigParser::OpenServerBlockFunc(Token token) {
 
 void ConfigParser::GetServerKeyFunc(Token token) {
   mHttpConfig.GetServerKey(token.lexeme());
-  if (token.lexeme() == "server_name") {  // key
+  if (token.lexeme() == "server_name") {
     mStatus = GetServerValue;
-  } else if (token.lexeme() == "listen") {  // key
+  } else if (token.lexeme() == "listen") {
     mStatus = GetServerValue;
-  } else if (token.lexeme() == "error_page") {  // key
+  } else if (token.lexeme() == "error_page") {
     mStatus = GetServerValue;
-  } else if (token.lexeme() == "client_max_body_size") {  // key
+  } else if (token.lexeme() == "client_max_body_size") {
     mStatus = GetServerValue;
   } else if (token.lexeme() == "root") {
     mStatus = GetServerValue;
-  } else if (token.lexeme() == "location") {  // key
+  } else if (token.lexeme() == "location") {
     mStatus = GetLocation;
   } else {
     throw "Error: " + token.lexeme() + " is not server_name or listen or location";

@@ -21,15 +21,14 @@ struct LocationConfig {
   string fastcgiPass;
 };
 
-// 출력 연산자 오버로딩
 struct ServerConfig {
-  vector<string> serverName;  // 여러개 받을려고 해놓은 것 같긴 함
+  vector<string> serverName;
   string serverHost;
   string rootPath;
   vector<string> errorPageList;
   size_t serverPort;
   size_t maxClientBodySize;
-  vector<LocationConfig> locationConfigList;  // 시간..?
+  vector<LocationConfig> locationConfigList;
   Trie locationConfigTrie;
 
   ServerConfig() {
@@ -88,17 +87,6 @@ ostream &operator<<(ostream &os, const ServerConfig &serverConfig) {
   return os;
 };
 
-// map<string, ServerConfig> httpConfig;  // 이것만 parse()에서 리턴하게 끔
-// stirng : server_name
-// ServerConfig : ServerConfig
-
-// vector<ServerConfig> httpConfigList;
-
-// url = kakao.com/hello/world
-// naver.com
-// google.com
-// kakao.com
-
 class HttpConfig {
  public:
   HttpConfig() {}
@@ -142,7 +130,7 @@ void HttpConfig::OpenServerBlock() {}
 
 void HttpConfig::GetServerKey(string &key) { mKey = key; }
 
-void HttpConfig::GetServerValue(string &value) {  // 이거 짜다가 호스트 궁금해짐.
+void HttpConfig::GetServerValue(string &value) {
   if (mKey == "server_name") {
     mServerConfigList.back().serverName.push_back(value);
   } else if (mKey == "listen") {
