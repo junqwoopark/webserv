@@ -92,6 +92,11 @@ class EventHandler {
         struct stat fileStat;
         fstat(udata->serverFd, &fileStat);
         udata->readFileSize = fileStat.st_size;
+
+        if (udata->readFileSize == 0) {
+          udata->ioEventState = WriteClient;
+          close(udata->serverFd);
+        }
         return;
       }
     }
@@ -147,6 +152,10 @@ class EventHandler {
       struct stat fileStat;
       fstat(udata->serverFd, &fileStat);
       udata->readFileSize = fileStat.st_size;
+      if (udata->readFileSize == 0) {
+        udata->ioEventState = WriteClient;
+        close(udata->serverFd);
+      }
     }
 
     if (udata->ioEventState == ReadFile || udata->ioEventState == ReadCgi) {
@@ -183,7 +192,6 @@ class EventHandler {
   }
 
   void readCgiEventHandler(int kq, struct kevent &event) {
-    cout << "readCgiEventHandler" << endl;
     UData *udata = (UData *)event.udata;
     intptr_t data = event.data;
     char buffer[data];
@@ -246,7 +254,6 @@ class EventHandler {
       body = body.substr(data);
       return;
     }
-    cout << udata->serverFd << endl;
     write(udata->serverFd, body.c_str(), body.size());
     body.clear();
 

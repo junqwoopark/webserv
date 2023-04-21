@@ -55,8 +55,8 @@ class WebServ {
 
     EventHandler eventHandler;
     while (42) {
-      struct kevent eventList[1024];
-      int eventCount = kevent(kq, NULL, 0, eventList, 1024, NULL);
+      struct kevent eventList[8192];
+      int eventCount = kevent(kq, NULL, 0, eventList, 8192, NULL);
 
       if (eventCount == -1) {
         throw runtime_error("kevent error");

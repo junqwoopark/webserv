@@ -24,6 +24,8 @@ class Request {
     mHeaders = map<string, string>();
     mBody = "";
     mIsChunked = false;
+    mIsHeaderComplete = false;
+    mIsBodyComplete = false;
   }
 
   void append(char *buffer, size_t size, size_t maxClientBodySize) {
