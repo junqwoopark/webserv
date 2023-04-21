@@ -20,6 +20,14 @@ $(TARGET): $(OBJS)
 	$(CXX) $(CFLAGS) $(INCLUDES) -c -o $@ $<
 
 clean:
-	rm -f $(OBJS) $(TARGET)
+	rm -f $(OBJS)
 
-.PHONY: all clean
+fclean:
+	rm -f $(OBJS)
+	rm -f $(TARGET)
+
+re:
+	$(MAKE) fclean
+	$(MAKE) all
+
+.PHONY : all clean fclean re
