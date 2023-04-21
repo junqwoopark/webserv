@@ -20,6 +20,7 @@ class Response {
   void setBody(const string &body) { mBody = vector<char>(body.begin(), body.end()); }
   void setError(int errorCode) {
     mStatusCode = errorCode;
+    mContentType = "html";
     mBody = vector<char>(mStatusCodes[errorCode].begin(), mStatusCodes[errorCode].end());
   }
   void setContentType(const string &contentType) { mContentType = contentType; }

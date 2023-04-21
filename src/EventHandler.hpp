@@ -78,6 +78,8 @@ class EventHandler {
     string &root = udata->serverConfig->rootPath;
     vector<string> &errorPageList = udata->serverConfig->errorPageList;
 
+    udata->response.setError(atoi(errorCode.c_str()));
+
     for (size_t i = 0; i < errorPageList.size(); i++) {
       if (errorPageList[i].substr(0, errorCode.length()) == errorCode) {
         string errorFilePath = root + '/' + errorPageList[i].substr(errorCode.length() + 1);
@@ -86,6 +88,7 @@ class EventHandler {
 
         udata->serverFd = errorFileFd;
         udata->ioEventState = ReadFile;
+        udata->response.setBody("");
         EV_SET(&event, udata->serverFd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, udata);
         kevent(kq, &event, 1, NULL, 0, NULL);
 
@@ -101,7 +104,6 @@ class EventHandler {
       }
     }
 
-    udata->response.setError(atoi(errorCode.c_str()));
     udata->ioEventState = WriteClient;
 
     EV_SET(&event, udata->clientFd, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, udata);
@@ -397,9 +399,15 @@ class EventHandler {
           struct dirent *ent;
           string body = "";
           while ((ent = readdir(dir)) != NULL) {
+            body += "<a href=\"";
+            body += udata->request.getUri();
+            body += ent->d_name;
+
+            if (ent->d_type == DT_DIR) body += "/";
+            body += "\">";
             body += ent->d_name;
             if (ent->d_type == DT_DIR) body += "/";
-            body += "<br>";
+            body += "</a><br>";
           }
           udata->response.setBody(body);
           closedir(dir);
