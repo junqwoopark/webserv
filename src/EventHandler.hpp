@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <math.h>
 #include <netinet/in.h>
+#include <pthread.h>
 #include <signal.h>
 #include <sys/event.h>
 #include <sys/socket.h>
@@ -12,6 +13,7 @@
 #include <unistd.h>
 
 #include <cstdio>
+#include <ios>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -37,7 +39,7 @@ class EventHandler {
     if (event.filter == EVFILT_TIMER && udata->cgiPid) {
       close(udata->serverFd);
       kill(udata->cgiPid, SIGKILL);
-      throw "500";
+      throw "504";
     } else if (event.filter == EVFILT_TIMER) {
       throw "408";
     }
@@ -137,6 +139,13 @@ class EventHandler {
     char buffer[event.data];
     int readSize = read(udata->clientFd, buffer, event.data);
 
+    if (readSize <= 0) {
+      close(udata->clientFd);
+      deleteTimer(kq, udata);
+      delete udata;
+      return;
+    }
+
     setTimer(kq, udata);
 
     udata->request.append(buffer, readSize, udata->serverConfig->maxClientBodySize);
@@ -179,6 +188,11 @@ class EventHandler {
     char buffer[1024];
     int readSize = read(udata->serverFd, buffer, 1024);
 
+    if (readSize == -1) {
+      close(udata->serverFd);
+      throw "500";
+    }
+
     udata->response.append(buffer, readSize);
 
     udata->readFileSize -= readSize;
@@ -194,20 +208,23 @@ class EventHandler {
   }
 
   void readCgiEventHandler(int kq, struct kevent &event) {
-    cout << "readCgiEventHandler" << endl;
     UData *udata = (UData *)event.udata;
     intptr_t data = event.data;
     char buffer[data];
     int readSize = read(udata->serverFd, buffer, data);
 
+    if (readSize == -1) {
+      close(udata->serverFd);
+      kill(udata->cgiPid, SIGKILL);
+      deleteTimer(kq, udata);
+      throw "500";
+    }
+
     setTimer(kq, udata);
 
     udata->response.append(buffer, readSize);
 
-    cout << "readSize: " << readSize << endl;
-
     if (event.flags & EV_EOF) {
-      cout << "EV_EOF" << endl;
       deleteTimer(kq, udata);
       kill(udata->cgiPid, SIGKILL);
       udata->ioEventState = WriteClient;
@@ -225,8 +242,12 @@ class EventHandler {
 
     size_t responseLength = mResponse.size();
 
-    size_t writeSize = write(udata->clientFd, &mResponse[udata->writeOffset],
-                             min(responseLength - udata->writeOffset, (size_t)event.data));
+    int writeSize = write(udata->clientFd, &mResponse[udata->writeOffset],
+                          min(responseLength - udata->writeOffset, (size_t)event.data));
+    if (writeSize == -1) {
+      close(udata->clientFd);
+      delete udata;
+    }
 
     udata->writeOffset += writeSize;
 
@@ -237,13 +258,20 @@ class EventHandler {
 
   void writeFileEventHandler(int kq, struct kevent &event) {
     UData *udata = (UData *)event.udata;
+    intptr_t data = event.data;
+    String &body = udata->request.getBody();
+    int writeSize = 0;
 
-    size_t writeSize = write(udata->serverFd, udata->request.getBody().c_str(), udata->request.getBody().size());
-    close(udata->serverFd);
-
-    if (writeSize != udata->request.getBody().size()) {
+    writeSize = write(udata->serverFd, body.c_str(), (long)body.size());
+    if (writeSize == -1) {
+      close(udata->serverFd);
       throw "500";
     }
+    body = body.substr(writeSize);
+
+    if (!body.empty()) return;
+
+    close(udata->serverFd);
 
     EV_SET(&event, udata->clientFd, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, udata);
     kevent(kq, &event, 1, NULL, 0, NULL);
@@ -254,14 +282,17 @@ class EventHandler {
     UData *udata = (UData *)event.udata;
     intptr_t data = event.data;
     String &body = udata->request.getBody();
+    int writeSize;
 
-    if (body.size() > static_cast<size_t>(data)) {
-      write(udata->serverFd, body.c_str(), data);
-      body = body.substr(data);
-      return;
+    writeSize = write(udata->serverFd, body.c_str(), min(data, (long)body.size()));
+    if (writeSize == -1) {
+      close(udata->serverFd);
+      kill(udata->cgiPid, SIGKILL);
+      throw "500";
     }
-    write(udata->serverFd, body.c_str(), body.size());
-    body.clear();
+    body = body.substr(writeSize);
+
+    if (!body.empty()) return;
 
     EV_SET(&event, udata->serverFd, EVFILT_WRITE, EV_DELETE, 0, 0, udata);
     kevent(kq, &event, 1, NULL, 0, NULL);
@@ -275,9 +306,6 @@ class EventHandler {
   }
 
   void closeSocketEventHandler(struct kevent &event) {
-    cout << "close socket" << endl;
-    cout << event.ident << endl;
-    cout << event.filter << endl;
     UData *udata = (UData *)event.udata;
     close(udata->clientFd);
     delete udata;
@@ -434,7 +462,10 @@ class EventHandler {
       return ReadFile;
     } else if (method == "POST") {
       udata->serverFd = open(path.c_str(), O_RDWR | O_CREAT | O_TRUNC, 0644);
-      if (errno == EISDIR) throw "403";
+      if (errno == EISDIR)
+        throw "403";
+      else if (errno == ENOENT)
+        throw "404";
       return WriteFile;
     } else if (method == "DELETE") {
       if (unlink(path.c_str()) == -1) throw "404";
