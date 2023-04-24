@@ -13,11 +13,16 @@ int main(int argc, char **argv) {
     cout << "Usage: " << argv[0] << " [config file]" << endl;
     return 1;
   }
-  ConfigParser configParser;
-  HttpConfig config = configParser.parse(argv[1]);
-  cout << config << endl;
-  WebServ webserv(config);
-  webserv.run();
+
+  try {
+    ConfigParser configParser;
+    HttpConfig config = configParser.parse(argv[1]);
+    cout << config << endl;
+    WebServ webserv(config);
+    webserv.run();
+  } catch (const std::exception &e) {
+    cout << e.what() << endl;
+  }
 
   return 0;
 }

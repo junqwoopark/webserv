@@ -35,7 +35,7 @@ class EventHandler {
     UData *udata = (UData *)event.udata;
 
     if (event.filter == EVFILT_TIMER && udata->cgiPid) {
-      close(udata->cgiFd[READ]);
+      close(udata->serverFd);
       kill(udata->cgiPid, SIGKILL);
       throw "500";
     } else if (event.filter == EVFILT_TIMER) {
@@ -194,6 +194,7 @@ class EventHandler {
   }
 
   void readCgiEventHandler(int kq, struct kevent &event) {
+    cout << "readCgiEventHandler" << endl;
     UData *udata = (UData *)event.udata;
     intptr_t data = event.data;
     char buffer[data];
@@ -203,7 +204,10 @@ class EventHandler {
 
     udata->response.append(buffer, readSize);
 
+    cout << "readSize: " << readSize << endl;
+
     if (event.flags & EV_EOF) {
+      cout << "EV_EOF" << endl;
       deleteTimer(kq, udata);
       kill(udata->cgiPid, SIGKILL);
       udata->ioEventState = WriteClient;
@@ -271,6 +275,9 @@ class EventHandler {
   }
 
   void closeSocketEventHandler(struct kevent &event) {
+    cout << "close socket" << endl;
+    cout << event.ident << endl;
+    cout << event.filter << endl;
     UData *udata = (UData *)event.udata;
     close(udata->clientFd);
     delete udata;
@@ -295,6 +302,11 @@ class EventHandler {
 
     string method = udata->request.getMethod();
     ServerConfig *serverConfig = udata->serverConfig;
+
+    if (find(serverConfig->serverName.begin(), serverConfig->serverName.end(), udata->request.getServerName()) ==
+        serverConfig->serverName.end()) {
+      throw "404";
+    }
 
     Trie &trie = serverConfig->locationConfigTrie;
 
