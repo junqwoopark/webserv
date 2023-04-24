@@ -23,7 +23,6 @@ struct LocationConfig {
 
 struct ServerConfig {
   vector<string> serverName;
-  string serverHost;
   string rootPath;
   vector<string> errorPageList;
   size_t serverPort;
@@ -33,7 +32,6 @@ struct ServerConfig {
 
   ServerConfig() {
     serverName = vector<string>();
-    serverHost = "";
     errorPageList = vector<string>();
     serverPort = 0;
     maxClientBodySize = 1 * 1024 * 1024;
@@ -54,7 +52,6 @@ ostream &operator<<(ostream &os, const ServerConfig &serverConfig) {
     os << serverConfig.serverName[i] << ' ';
   }
   os << endl;
-  os << "server_host: " << serverConfig.serverHost << endl;
   os << "server_port: " << serverConfig.serverPort << endl;
   os << "default_error_page: ";
   for (size_t i = 0; i < serverConfig.errorPageList.size(); i++) {
